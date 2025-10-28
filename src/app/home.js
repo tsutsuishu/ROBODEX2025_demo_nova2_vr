@@ -126,7 +126,7 @@ export default function Home(props) {
             arm-motion-ui={base_position+":"+base_rotation}
             grip-control
             default-event-target
-            motion-dynamic-filter
+            motion-dynamic-filter={`enabled: ${props.appmode === AppMode.filter}`}
           />
           {/* motion-dynamic-filter */}
           {/* <a-sky color="#ECECEC"></a-sky> 
