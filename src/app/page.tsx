@@ -141,7 +141,7 @@ export default function Page() {
             Cookie 設定（角度・位置）)
           </a>
           <a href="/nova2_withCam" className="button">
-            カメラ付き(notyet)
+            カメラ付き
           </a>
         </div>
       </div>

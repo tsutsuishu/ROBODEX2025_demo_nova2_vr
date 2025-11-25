@@ -42,7 +42,7 @@ export default function Home(props) {
   const [vrModeAngle, setVrModeAngle] = React.useState(90);       // ロボット回転角度
   const [vrModeOffsetX, setVrModeOffsetX] = React.useState(0.35);   // X offset
   const [base_rotation, setBaseRotation] = React.useState(`-90 90 0`);     // ベース角度
-  const [base_position, setBasePosition] = React.useState(`0.35 0.75 -1`);   // ベース位置
+  const [base_position, setBasePosition] = React.useState(`0.35 0.75 -0.8`);   // ベース位置
 
   const [draw_ready, set_draw_ready] = React.useState(false)
 
@@ -79,7 +79,7 @@ export default function Home(props) {
   }, []);
   // base_position, base_rotation 更新
   React.useEffect(() => {
-    setBasePosition(`${vrModeOffsetX} 0.75 -1`);
+    setBasePosition(`${vrModeOffsetX} 0.75 -0.8`);
     setBaseRotation(`-90 ${vrModeAngle} 0`);
     console.log("Home base_pos, rotation:", base_position, base_rotation);
   }, [vrModeAngle, vrModeOffsetX]);
