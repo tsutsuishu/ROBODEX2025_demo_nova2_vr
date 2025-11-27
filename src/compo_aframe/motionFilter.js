@@ -42,6 +42,7 @@ AFRAME.registerComponent('motion-dynamic-filter', {
         return {
             position: suppressedPosition.clone().multiplyScalar(deltatime),
             quaternion: scaleQuaternion(suppressedQuaternion.clone(), deltatime)
+            // quaternion: scaleQuaternion(deltaQuaternion.clone(), 1/2)
         }
     }
 });

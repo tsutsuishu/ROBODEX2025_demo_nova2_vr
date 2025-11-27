@@ -8,7 +8,8 @@ export const codeType = package_info.name; // software name
 const version = package_info.version; // version number
 
 //const MQTT_BROKER_URL = "wss://192.168.0.200/mqws"; // For Nagoya-U UCLab Development
-const MQTT_BROKER_URL = "wss://sora3.uclab.jp/mqws"; // For Nagoya-U UCLab Development
+// const MQTT_BROKER_URL = "wss://sora3.uclab.jp/mqws"; // 名大外に物理ロボットがある場合
+const MQTT_BROKER_URL = "wss://sora2.uclab.jp/mqws"; // 名大内に物理ロボットがある場合
 //const MQTT_BROKER_URL = process.env.NEXT_PUBLIC_MQTT_BROKER_URL; // For Nagoya-U UCLab Development
 
 
@@ -85,5 +86,6 @@ export const subscribeMQTT = (topic) => {
 }
 
 export const publishMQTT = (topic, msg) => {
-    mqttclient.publish(topic, msg);
+    // mqttclient.publish(topic, msg);
+    // develop
 }

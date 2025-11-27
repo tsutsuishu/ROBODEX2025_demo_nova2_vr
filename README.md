@@ -17,3 +17,7 @@ pnpm run dev-https
 /practice は練習モード
 
 （練習モードの遅延付きも作りたい）
+
+通信時には以下の項目を確認する
+package.json内のname
+src/lib/MetaworkMQTT.js

@@ -58,7 +58,7 @@ export default function IkWorkerManager({ robotName,
           break;
         case 'status':
           workerData.current.status = event.data;
-          console.log("IK Worker status:", event.data);
+          // console.log("IK Worker status:", event.data);
           break;
         case 'pose':
           workerData.current.pose = event.data;

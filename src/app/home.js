@@ -16,6 +16,8 @@ import '../compo_aframe/default_event_target.js';
 import '../compo_aframe/motionFilter.js'
 import '../compo_aframe/model_opacity.js'
 
+import '../compo_aframe/armWandMotionUI.js';
+
 import { getCookie } from '../lib/cookie_id.js';
 import { setupMQTT } from '../lib/MQTT_jobs.js';
 
@@ -123,7 +125,8 @@ export default function Home(props) {
             robot-loader="model: nova2_robot"
             ik-worker={initial_pose}
             reflect-worker-joints={`appmode: ${props.appmode}`}
-            arm-motion-ui={base_position+":"+base_rotation}
+            /*arm-motion-ui={base_position+":"+base_rotation}*/
+            arm-wand-motion-ui={base_position+":"+base_rotation}
             grip-control
             default-event-target
             motion-dynamic-filter={`enabled: ${props.appmode === AppMode.filter}`}
