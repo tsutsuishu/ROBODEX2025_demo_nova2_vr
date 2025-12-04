@@ -29,8 +29,8 @@ AFRAME.registerComponent('motion-dynamic-filter', {
         const deltaQuaternion = evt.detail.quaternion
         const deltatime = evt.detail.deltatime
 
-        const linearVelocity = deltaPosition.clone().divideScalar(deltatime * 2);
-        const angularVelocity = scaleQuaternion(deltaQuaternion.clone(), 1 / deltatime / 4)
+        const linearVelocity = deltaPosition.clone().divideScalar(deltatime);
+        const angularVelocity = scaleQuaternion(deltaQuaternion.clone(), 1 / deltatime)
 
         const smoothedPose = this.noizeFilter.applyFilter(linearVelocity, angularVelocity)
 
