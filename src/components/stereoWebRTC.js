@@ -26,6 +26,7 @@ export default function StereoVideo(props) {
     const [stereo_visible, set_stereo_visible] = React.useState(false)
     
     const set_RealSense = (appmode === AppMode.withDualCam || appmode === AppMode.monitor); //realsenseを使う場合はtrueにする
+    // const set_RealSense = (appmode === AppMode.withCam)
 
 
     // statsReport 定期的に更新
@@ -62,9 +63,9 @@ export default function StereoVideo(props) {
     React.useEffect(() => {
         if (sora_once && objectRender) {
             console.log("Using sora-js-sdk version:", Sora.version());
-            //const signalingUrl = 'wss://sora.uclab.jp/signaling'; //demo用
-            const signalingUrl = 'wss://sora3.uclab.jp/signaling'; // 202508 demo用
-            //            const signalingUrl = 'wss://sora2.uclab.jp/signaling'; // 202508 demo用
+            // const signalingUrl = 'wss://sora.uclab.jp/signaling'; //demo用
+            const signalingUrl = 'wss://sora2.uclab.jp/signaling'; // 202508 demo用
+            // const signalingUrl = 'wss://sora3.uclab.jp/signaling'; // 202508 demo用
             const channelId = 'nova2-vr180';
             const channelId1 = 'nova2-hand';
             const audioChannelId = 'nova2-audio'; // 202508 のdemo では、使わない予定
@@ -391,14 +392,16 @@ export default function StereoVideo(props) {
             if (set_RealSense) {
                 const videoPlane = document.createElement('a-plane');
                 videoPlane.setAttribute('id', 'videoPlate');
-                videoPlane.setAttribute('position', '-0.25 .1 -0.8');
-                videoPlane.setAttribute('scale', '0.25 0.25 1');
+                // videoPlane.setAttribute('position', '-0.25 .1 -0.8');
+                videoPlane.setAttribute('position', '0.25 1.25 -0.75');
+                // videoPlane.setAttribute('scale', '0.25 0.25 1');
+                videoPlane.setAttribute('scale', '0.5 0.5 1');
                 videoPlane.setAttribute('width', '1.6');
                 videoPlane.setAttribute('height', '1.2');
                 videoPlane.setAttribute('material', 'src: #remotevideo-realsense;');
                 videoPlane.setAttribute('current-ui', '');
                 videoPlane.setAttribute('visible', true); //ワイプの手先カメラ表示
-                UIBack.appendChild(videoPlane);
+                scene.appendChild(videoPlane);
             }
 
             // 新しい <a-entity> を <a-scene> に追加

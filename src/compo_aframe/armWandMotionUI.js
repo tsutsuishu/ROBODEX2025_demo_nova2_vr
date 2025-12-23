@@ -1,4 +1,4 @@
-// armMoitionUIを参考に仮想wand操作を作りたい．
+// armMoitionUIを参考に仮想wand操作を作りたい． →他の操作手法も検討すべき(ここでregisterする)
 import AFRAME from 'aframe';
 const THREE = window.AFRAME.THREE;
 import { isoInvert, isoMultiply } from '../lib/isometry3.js';
@@ -217,3 +217,146 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
     }
   }
 });
+
+AFRAME.registerComponent('arm-motion-inertia', {
+  schema:
+    { type: 'string', default: "0 0 0:0 0 0" }
+  ,
+  init: function () {
+    // target 表示用
+    const myColor = this.el.getAttribute('material').color;
+    const frameMarker = document.createElement('a-entity');
+    console.log("Arm motion ui initializing!!")
+    frameMarker.setAttribute('a-xy-axes-frame', { // 上下逆にしています。
+      length: 0.05,
+      radius: 0.002,
+      sphere: 0.008,
+      opacity: 0.7,
+      color: myColor ? myColor : 'blue',
+    });
+    this.el.appendChild(frameMarker);
+    this.frameMarker = frameMarker;
+    frameMarker.object3D.visible = true;
+    frameMarker.object3D.position.copy(new THREE.Vector3(0, 1, 0));
+    //
+    //
+    this.vrControllerEl = null;
+    this.objStartingPose = [new THREE.Vector3(0, 0, 0), new THREE.Quaternion(0, 0, 0, 1)];
+    this.vrCtrlStartingPoseInv = [new THREE.Vector3(0, 0, 0), new THREE.Quaternion(0, 0, 0, 1)];
+    this.worldToBase = [this.el.object3D.position, this.el.object3D.quaternion];
+    this.baseToWorld = isoInvert(this.worldToBase);
+
+    this.vrCtrlLastPose = [new THREE.Vector3(0, 0, 0), new THREE.Quaternion(0, 0, 0, 1)];
+    this.vrCtrlLastFilteredPose = [new THREE.Vector3(0, 0, 0), new THREE.Quaternion(0, 0, 0, 1)];
+
+    // swing関連
+    this.isAutoMoving = false
+    this.autoDiffTick = [new THREE.Vector3(0, 0, 0), new THREE.Quaternion(0, 0, 0, 1)];
+    this.lastPoseInitialized = false
+    this.autoDiffTickInitialized = false
+    this.autoVelocityThreshold = 0.0003
+
+    this.el.addEventListener('triggerdown', (evt) => {
+      const ctrlEl = evt.detail?.originalTarget;
+      this.vrControllerEl = ctrlEl;
+      if (!this.vrControllerEl.laserVisible) {
+        if (this?.returnTimerId) clearTimeout(this.returnTimerId);
+        this.isAutoMoving = false
+        this.frameMarker.object3D.visible = false
+      }
+    });
+    this.el.addEventListener('triggerup', (evt) => {
+      const ctrlEl = evt.detail?.originalTarget;
+      this.vrControllerEl = ctrlEl;
+      const iso3 = workerPose(this.el);
+      if (iso3) {
+        const frameMarkerResetFunc = () => {
+          this.frameMarker.object3D.position.copy(iso3[0]);
+          this.frameMarker.object3D.quaternion.copy(iso3[1]);
+        }
+        this.returnTimerId = setTimeout(frameMarkerResetFunc, 2000);
+        this.objStartingPose = iso3;
+        this.vrCtrlStartingPoseInv = isoMultiply(isoInvert([ctrlEl.object3D.position,
+          ctrlEl.object3D.quaternion]),
+        this.worldToBase);
+
+        this.isAutoMoving = true
+        this.autoDiffTickInitialized = false
+        this.lastPoseInitialized = false
+      }
+    });
+  },
+  tick: function (time, deltatime) {
+    if (!this.el?.shouldListenEvents) return;
+    const ctrlEl = this?.vrControllerEl;
+    if (!ctrlEl || !this.el.workerData || !this.el.workerRef) {
+      // console.warn('workerData, workerRef or controller not ready yet.');
+      return;
+    }
+    if(this.isAutoMoving){
+      if(!this.autoDiffTickInitialized){
+        const vrControllerPose = isoMultiply(this.baseToWorld,
+          [ctrlEl.object3D.position,
+        ctrlEl.object3D.quaternion]);
+        
+        if(!this.lastPoseInitialized){
+          this.vrCtrlLastFilteredPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
+          this.vrCtrlLastPose = vrControllerPose
+          this.lastPoseInitialized = true
+          // triggerを離してから1tick目と2tick目の差分を参照しているが，常にlastPoseを保存しておけば1tick目からautoで動くようにはできる→強調フィルタとの兼ね合いがあると分離できない，el越しに参照できるように
+          return
+        }
+
+        const vrCtrlLastPoseInv = isoInvert(this.vrCtrlLastPose)
+        this.autoDiffTick = isoMultiply(vrCtrlLastPoseInv, vrControllerPose)
+
+        if(this.autoDiffTick[0].length() / deltatime > this.autoVelocityThreshold){
+          this.autoDiffTickInitialized = true
+          this.frameMarker.object3D.visible = true
+          // 動作強調フィルタ系を使うならここで this.autoDiffTick に適用すべき
+        } else {
+          this.isAutoMoving = false
+          return
+        }
+      }
+      
+      this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, [this.autoDiffTick[0], new THREE.Quaternion(0, 0, 0, 1)])
+      const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
+
+      // 連続的にコントローラ姿勢変化を追わないから，開始姿勢とのズレも小さく，本来は不要なはず
+      const filteredVrCtrlStartingPoseInv = [
+        new THREE.Vector3(0, 0, 0),
+        vrControllerDelta[1].clone().multiply(this.vrCtrlLastPose[1].clone().conjugate())
+      ];
+      const vrCtrlToObj = [
+        new THREE.Vector3(0, 0, 0),
+        filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
+      ];
+      const ObjToVrCtrl = [
+        new THREE.Vector3(0, 0, 0),
+        vrCtrlToObj[1].clone().conjugate()
+      ];
+      const newObjPose = isoMultiply(isoMultiply(this.objStartingPose,
+        isoMultiply(ObjToVrCtrl,
+          vrControllerDelta)),
+        vrCtrlToObj);
+      const m4 = new THREE.Matrix4();
+      m4.compose(newObjPose[0], newObjPose[1], new THREE.Vector3(1, 1, 1));
+      this.el.workerRef?.current?.postMessage({
+        type: 'destination',
+        endLinkPose: m4.elements
+      });
+      this.frameMarker.object3D.position.copy(newObjPose[0]);
+      this.frameMarker.object3D.quaternion.copy(newObjPose[1]);
+    }
+  },
+  update: function (oldData) {
+    console.log("Update armUI", oldData)
+    if (oldData != undefined) {// 初回のupdate以外
+      this.worldToBase = [this.el.object3D.position, this.el.object3D.quaternion];
+      this.baseToWorld = isoInvert(this.worldToBase);
+    }
+  }
+});
+
+

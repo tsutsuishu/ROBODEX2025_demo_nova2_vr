@@ -11,7 +11,8 @@ AFRAME.registerComponent('default-event-target', {
     // ロボットの読み込みが終わったら！
       this.el.addEventListener('ik-worker-start', () => {
         const robotRegistryComp = this.el.sceneEl.robotRegistryComp;
-        robotRegistryComp?.eventDeliveryOneLocation(this.el.id); // デフォルトでここだけに！
+        //robotRegistryComp?.eventDeliveryOneLocation(this.el.id); // デフォルトでここだけに！
+        robotRegistryComp?.enableEventDelivery(this.el.id);
         console.log('### default-target: enabled event delivery for id:', this.el.id);
       });
   }

@@ -11,6 +11,7 @@ import VrControllerComponents from '../components/VrControllerComponents.jsx';
 import '../compo_aframe/ikWorker.js';
 import '../compo_aframe/reflectWorkerJoints.js';
 import '../compo_aframe/armMotionUI.js';
+import '../compo_aframe/armWandMotionUI.js';
 import '../compo_aframe/gripControl.js';
 import '../compo_aframe/default_event_target.js';
 import '../compo_aframe/motionFilter.js'
@@ -112,7 +113,23 @@ export default function Home(props) {
               /> : <></>
           }
 
+          {/*
+          <a-plane id="nova2-plane"
+            ref={nova2_ref}
+            position={base_position} rotation={base_rotation}
 
+            width="0.5" height="0.5" color="#7BC8A4"
+            material="opacity: 0.3; transparent: true; side: double;"
+            robot-loader="model: nova2_robot"
+            ik-worker={initial_pose}
+            reflect-worker-joints={`appmode: ${props.appmode}`}
+            arm-motion-ui={base_position+":"+base_rotation}
+            grip-control
+            default-event-target
+            motion-dynamic-filter={`enabled: ${props.appmode === AppMode.filter}`}
+            swing-check
+          /> 
+          */}
 
           <a-plane id="nova2-plane"
             ref={nova2_ref}
@@ -127,8 +144,9 @@ export default function Home(props) {
             grip-control
             default-event-target
             motion-dynamic-filter={`enabled: ${props.appmode === AppMode.filter}`}
-          />
-          {/* motion-dynamic-filter */}
+            arm-motion-inertia ={base_position+":"+base_rotation}
+          /> 
+
           {/* <a-sky color="#ECECEC"></a-sky> 
                    ik-worker={`${deg90}, ${-deg90}, ${deg90}, 0, ${-deg90}, 0`}
 

@@ -101,6 +101,7 @@ const MOVEMENT_EMPHASIZE_DEFAULTS = {
   a: 2666,
   b: 0.467,
   maxAcceleration: 1,
+  minAcceleration: 0.5,
   mode: 'position'
 };
 
@@ -113,7 +114,8 @@ const ROTATION_EMPHASIZE_DEFAULTS = {
   threshold: 0.003,
   a: 200,
   b: -0.35,
-  maxAcceleration: 1,
+  maxAcceleration: 3,
+  minAcceleration: 0.25,
   mode: 'quaternion'
 };
 
@@ -178,11 +180,7 @@ const calculateEmphasizeScale = (motionDifference, params) => {
     if (motionDifference > params.threshold) {
       acceleration = params.a * motionDifference + params.b
     }else{
-      if (params.mode == "position") {
-        acceleration = 0.5
-      } else {
-        acceleration = 0.25
-      }
+      acceleration = params.minAcceleration
     }
   
 
