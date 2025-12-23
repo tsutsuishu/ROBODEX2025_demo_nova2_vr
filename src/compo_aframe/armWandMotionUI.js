@@ -323,7 +323,6 @@ AFRAME.registerComponent('arm-motion-inertia', {
       this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, [this.autoDiffTick[0], new THREE.Quaternion(0, 0, 0, 1)])
       const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
 
-      // 連続的にコントローラ姿勢変化を追わないから，開始姿勢とのズレも小さく，本来は不要なはず
       const filteredVrCtrlStartingPoseInv = [
         new THREE.Vector3(0, 0, 0),
         vrControllerDelta[1].clone().multiply(this.vrCtrlLastPose[1].clone().conjugate())
