@@ -10,7 +10,8 @@ export const AppMode = {
   simRobot: 'simRobot',    // 仮想ロボット（実ロボットのシミュレータ）
   practice: 'practice',    // 練習モード (荷物を運ぶタイプ：VRのみ)
   monitor: 'monitor',    // 監視モード (ロボットの状態を監視する)
-  filter: 'filter',    // 動的な操作反映モード
+  filter: 'filter',    // 
+  develop: 'develop'    //実験機能 + カメラ
 };
 
 
@@ -18,7 +19,8 @@ export function isControlMode(appmode) {
   return (appmode === AppMode.normal ||
           appmode === AppMode.withCam ||
           appmode === AppMode.withDualCam ||
-          appmode === AppMode.filter);
+          appmode === AppMode.filter ||
+          appmode === AppMode.develop);
 }
 
 export function isCameraMode(appmode) {

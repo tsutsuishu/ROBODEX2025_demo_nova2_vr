@@ -23,10 +23,10 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
     { type: 'string', default: "0 0 0:0 0 0" }
   ,
   init: function () {
+    // target 表示用
     const myColor = this.el.getAttribute('material').color;
     const frameMarker = document.createElement('a-entity');
     console.log("Arm motion ui initializing!!")
-    // target 表示用
     frameMarker.setAttribute('a-xy-axes-frame', { // 上下逆にしています。
       length: 0.05,
       radius: 0.002,
@@ -45,7 +45,6 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
     this.objStartingPose = [new THREE.Vector3(0, 0, 0), new THREE.Quaternion(0, 0, 0, 1)];
     this.vrCtrlStartingPoseInv = [new THREE.Vector3(0, 0, 0), new THREE.Quaternion(0, 0, 0, 1)];
     this.worldToBase = [this.el.object3D.position, this.el.object3D.quaternion];
-    // これの位置がかわるので問題になる！
     this.baseToWorld = isoInvert(this.worldToBase);
 
     this.vrCtrlLastPose = [new THREE.Vector3(0, 0, 0), new THREE.Quaternion(0, 0, 0, 1)];
@@ -131,52 +130,43 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
     if (!this.el?.shouldListenEvents) return;
     const ctrlEl = this?.vrControllerEl;
     if (!ctrlEl || !this.el.workerData || !this.el.workerRef) {
-      //      console.warn('workerData, workerRef or controller not ready yet.');
+      // console.warn('workerData, workerRef or controller not ready yet.');
       return;
     }
     if (this.triggerdownState && ~ctrlEl.laserVisible) {
       const vrControllerPose = isoMultiply(this.baseToWorld,
         [ctrlEl.object3D.position,
         ctrlEl.object3D.quaternion]);
-
       const vrCtrlLastPoseInv = isoInvert(this.vrCtrlLastPose)
       const vrCtrlDiffTick = isoMultiply(vrCtrlLastPoseInv, vrControllerPose)
       let vrCtrlDiffTickFiltered = [vrCtrlDiffTick[0], vrCtrlDiffTick[1]]
 
-      // 違う操作方法でも差分ごとに変化を入れるのほうが制御しやすいはず
-      // 可変制御をした仮想のVRコントローラの位置(this.vrCtrlLastFilteredPose)を保持し続ける方法は使いそう
-      const motionFiltering = this.el.components['motion-dynamic-filter'];
-      if (motionFiltering) {
-        const filtered = motionFiltering.applyFilters({
-          detail: {
-            position: vrCtrlDiffTick[0],
-            quaternion: vrCtrlDiffTick[1],
-            deltatime: deltatime
-          }
-        });
-        vrCtrlDiffTickFiltered = [filtered.position, filtered.quaternion];
-      }
+      // const motionFiltering = this.el.components['motion-dynamic-filter'];
+      // if (motionFiltering) {
+      //   const filtered = motionFiltering.applyFilters({
+      //     detail: {
+      //       position: vrCtrlDiffTick[0],
+      //       quaternion: vrCtrlDiffTick[1],
+      //       deltatime: deltatime
+      //     }
+      //   });
+      //   vrCtrlDiffTickFiltered = [filtered.position, filtered.quaternion];
+      // }
       
       this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, vrCtrlDiffTickFiltered)
-      // 今まではスタート位置からの姿勢差分から次の位置を決めていたが，今のコントローラ位置から目標姿勢が一意に決まるはず．
-      // 今のコントローラ位置から一意に定まる姿勢のスタートからの差分を入力するでもいい？
 
       //debug
-      this.virtualController.object3D.position.copy(this.vrCtrlLastFilteredPose[0]);
+      // this.virtualController.object3D.position.copy(this.vrCtrlLastFilteredPose[0]);
+      // this.wandTip.object3D.position.copy(wandTipPose[0]);
       const wandTipPose = isoMultiply(this.vrCtrlLastFilteredPose, this.controlerToWandTip)
-      this.wandTip.object3D.position.copy(wandTipPose[0]);
-
 
       const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
       this.vrCtrlLastPose = vrControllerPose
       
-
-      vrControllerDelta[0] = vrControllerDelta[0].multiplyScalar(1.0);
-      vrControllerDelta[1].normalize();
       const filteredVrCtrlStartingPoseInv = [
         new THREE.Vector3(0, 0, 0),
         vrControllerDelta[1].clone().multiply(vrControllerPose[1].clone().conjugate())
-      ]; //可変的な回転反映に対応したコントローラ座標系での開始位置を改めて，現在位置と差分から計算
+      ];
       const vrCtrlToObj = [
         new THREE.Vector3(0, 0, 0),
         filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
@@ -190,15 +180,11 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
       //     vrControllerDelta)),
       //   vrCtrlToObj);
 
-      let newObjPose = isoMultiply(isoMultiply(this.objStartingPose,
-        isoMultiply(ObjToVrCtrl,
-          vrControllerDelta)),
-        vrCtrlToObj);
-      newObjPose[0] = wandTipPose[0]
-      newObjPose[1] = wandTipPose[1]
+      const newObjPose = wandTipPose
+      // newObjPose[0] = wandTipPose[0]
+      // newObjPose[1] = wandTipPose[1]
       // debug
-      this.robotTip.object3D.position.copy(newObjPose[0]);
-      
+      // this.robotTip.object3D.position.copy(newObjPose[0]);
       
       this.frameMarker.object3D.position.copy(newObjPose[0]);
       this.frameMarker.object3D.quaternion.copy(newObjPose[1]);
@@ -357,7 +343,6 @@ AFRAME.registerComponent('arm-motion-inertia', {
     }
   }
 });
-
 
 AFRAME.registerComponent('arm-displacement-motion-ui', {
   schema:
