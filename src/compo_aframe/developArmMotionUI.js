@@ -18,6 +18,49 @@ function workerPose(el) {
   return null;
 }
 
+AFRAME.registerComponent('connect-line', {
+  schema: {
+    start: { type: 'vec3', default: { x: 0, y: 0, z: 0 } },
+    end: { type: 'vec3', default: { x: 1, y: 1, z: 1 } },
+    color: { type: 'color', default: '#ff0000' }
+  },
+  
+  init: function() {
+    const data = this.data;
+    const geometry = new THREE.BufferGeometry();
+    const points = [
+      new THREE.Vector3(data.start.x, data.start.y, data.start.z),
+      new THREE.Vector3(data.end.x, data.end.y, data.end.z)
+    ];
+    geometry.setFromPoints(points);
+    
+    const material = new THREE.LineBasicMaterial({ color: data.color });
+    const line = new THREE.Line(geometry, material);
+    
+    this.el.setObject3D('mesh', line);
+    this.geometry = geometry;  // ジオメトリを保存
+  },
+  
+  update: function(oldData) {
+    const data = this.data;
+    
+    // 開始点と終了点が変わった場合
+    if (oldData.start !== data.start || oldData.end !== data.end) {
+      // 頂点データを更新
+      const positions = this.geometry.attributes.position.array;
+      positions[0] = data.start.x;
+      positions[1] = data.start.y;
+      positions[2] = data.start.z;
+      positions[3] = data.end.x;
+      positions[4] = data.end.y;
+      positions[5] = data.end.z;
+      
+      // 更新フラグを立てる
+      this.geometry.attributes.position.needsUpdate = true;
+    }
+  }
+});
+
 AFRAME.registerComponent('arm-wand-motion-ui', {
   schema:
     { type: 'string', default: "0 0 0:0 0 0" }
@@ -85,6 +128,16 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
     startRobotTip.object3D.position.copy(new THREE.Vector3(0, 1, 0));
     //　ここまでdebug
 
+    // ray
+    this.el.setAttribute('connect-line', {
+      start: '0 0 0', 
+      end: '0 0 0',
+      color: '#ff0000'
+    });
+    this.startWandLength = 1
+    this.angleRation = 1
+    
+
     this.el.addEventListener('triggerdown', (evt) => {
       console.log('### trigger down event. laserVisible: ',
         evt.detail?.originalTarget.laserVisible);
@@ -106,6 +159,9 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
           //debug
           this.startRobotTip.object3D.position.copy(iso3[0]);
           this.controlerToWandTip = isoMultiply(this.vrCtrlStartingPoseInv, this.objStartingPose)
+          // console.log(this.controlerToWandTip[0])
+          // this.startWandLength = this.controlerToWandTip[0].length()
+          // console.log(this.startWandLength)
         }
       }
     });
@@ -152,13 +208,27 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
       //   });
       //   vrCtrlDiffTickFiltered = [filtered.position, filtered.quaternion];
       // }
+      vrCtrlDiffTickFiltered[0] = vrCtrlDiffTickFiltered[0].multiplyScalar(0.5);
+      vrCtrlDiffTickFiltered[1] = scaleQuaternion(vrCtrlDiffTickFiltered[1],0.5)
       
       this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, vrCtrlDiffTickFiltered)
-
+      const wandTipPose = isoMultiply(this.vrCtrlLastFilteredPose, this.controlerToWandTip)
+      
       //debug
       // this.virtualController.object3D.position.copy(this.vrCtrlLastFilteredPose[0]);
       // this.wandTip.object3D.position.copy(wandTipPose[0]);
-      const wandTipPose = isoMultiply(this.vrCtrlLastFilteredPose, this.controlerToWandTip)
+      
+      // ray
+      this.el.setAttribute('connect-line', 'start', vrControllerPose[0]);
+      this.el.setAttribute('connect-line', 'end', wandTipPose[0]);
+      // const wandLength = vrControllerPose[0].clone().sub(wandTipPose[0]).length()
+      // this.angleRation = 0.5 / wandLength
+
+      // debug
+      console.log(2 * Math.acos(Math.min(1, Math.abs(vrCtrlDiffTickFiltered[1].w))))
+      const text = document.querySelector('#debug');
+      text.setAttribute('value',`${ (2 * Math.acos(Math.min(1, Math.abs(vrCtrlDiffTickFiltered[1].w)))).toFixed(3)}`)
+
 
       const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
       this.vrCtrlLastPose = vrControllerPose
@@ -389,6 +459,9 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
     startFrameMarker.object3D.visible = true;
     startFrameMarker.object3D.position.copy(new THREE.Vector3(0, 1, 0));
 
+    // 
+    this.deadRadius = 0.2
+
     this.el.addEventListener('triggerdown', (evt) => {
       console.log('### trigger down event. laserVisible: ',
         evt.detail?.originalTarget.laserVisible);
@@ -460,6 +533,9 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
       const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
       this.vrCtrlLastPose = vrControllerPose
 
+      const deltaLength = vrControllerDelta[0].length()
+      if(this.deadRadius > deltaLength) return
+
       // コントローラ座標系合わせ
       const filteredVrCtrlStartingPoseInv = [
         new THREE.Vector3(0, 0, 0),
@@ -474,8 +550,13 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
         vrCtrlToObj[1].clone().conjugate()
       ];
 
-      vrControllerDelta[0] = vrControllerDelta[0].multiplyScalar(0.05);
+      // deadzoneを超えたvectorのみを参照
+      const deadDeltaVector = vrControllerDelta[0].clone().multiplyScalar(this.deadRadius/deltaLength)
+      vrControllerDelta[0].sub(deadDeltaVector).multiplyScalar(0.05);
       vrControllerDelta[1] = scaleQuaternion(vrControllerDelta[1], 0.001)
+
+      // vrControllerDelta[0] = vrControllerDelta[0].multiplyScalar(0.05);
+      // vrControllerDelta[1] = scaleQuaternion(vrControllerDelta[1], 0.001)
       
       this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
         isoMultiply(ObjToVrCtrl,
