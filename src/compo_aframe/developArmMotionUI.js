@@ -459,8 +459,17 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
     startFrameMarker.object3D.visible = true;
     startFrameMarker.object3D.position.copy(new THREE.Vector3(0, 1, 0));
 
-    // 
+    // 変位制御追加分
     this.deadRadius = 0.2
+    const deadzone = document.createElement('a-sphere');
+    this.el.appendChild(deadzone);
+    this.deadzone = deadzone;
+    deadzone.object3D.visible = false;
+    deadzone.setAttribute('geometry', `radius:${this.deadRadius}`);
+    deadzone.setAttribute('material', 'opacity: 0.25');
+    deadzone.addEventListener('loaded', () => {
+      deadzone.getObject3D('mesh').material.depthWrite = false; //透過オブジェクト越しにgltfを見るために必要
+    });
 
     this.el.addEventListener('triggerdown', (evt) => {
       console.log('### trigger down event. laserVisible: ',
@@ -481,6 +490,7 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
           this.vrCtrlLastFilteredPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
           
           this.lastObjPose = this.objStartingPose
+          this.startPose = this.vrCtrlLastPose // deadzoneで使用
           this.startFrameMarker.object3D.position.copy(this.vrCtrlLastPose[0])
           this.startFrameMarker.object3D.quaternion.copy(this.vrCtrlLastPose[1])
         }
@@ -490,6 +500,8 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
       console.log('### trigger up event');
       this.vrControllerEl = evt.detail?.originalTarget;
       this.triggerdownState = false;
+      // 状態提示のsphere
+      this.deadzone.object3D.visible = false;
 
       const iso3 = workerPose(this.el);
       if (iso3) {
@@ -535,6 +547,9 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
 
       const deltaLength = vrControllerDelta[0].length()
       if(this.deadRadius > deltaLength) return
+      
+      this.deadzone.object3D.visible = true;
+      this.deadzone.object3D.position.copy(this.startPose[0])
 
       // コントローラ座標系合わせ
       const filteredVrCtrlStartingPoseInv = [
