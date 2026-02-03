@@ -103,8 +103,7 @@ export default function Home(props) {
             wasd-controls="acceleration: 200"
           ></a-entity>
 
-          <a-camera id="camera" stereocam ></a-camera>
-
+          <a-camera id="camera" stereocam></a-camera>          
 
           {  // ステレオカメラ使うか extra-camera={props.appmode}>
             (props.appmode === AppMode.withCam || props.appmode === AppMode.withDualCam || props.appmode === AppMode.monitor) ?
@@ -124,7 +123,7 @@ export default function Home(props) {
               robot-loader="model: nova2_robot"
               ik-worker={initial_pose}
               reflect-worker-joints={`appmode: ${props.appmode}`}
-              arm-wand-motion-ui={base_position+":"+base_rotation}  
+              arm-mimic-displacement-motion-ui={base_position+":"+base_rotation}  
               grip-control
               default-event-target
               motion-dynamic-filter={`enabled: ${props.appmode === AppMode.filter}`}
@@ -145,6 +144,7 @@ export default function Home(props) {
               swing-check
             />   
           }
+          <a-text id = "debug" value = "null" scale = "0.5 0.5 0.5" position="0 0.5 -1" visible="false"></a-text>
 
           {/* <a-sky color="#ECECEC"></a-sky> 
                    ik-worker={`${deg90}, ${-deg90}, ${deg90}, 0, ${-deg90}, 0`}

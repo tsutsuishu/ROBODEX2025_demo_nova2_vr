@@ -18,6 +18,49 @@ function workerPose(el) {
   return null;
 }
 
+AFRAME.registerComponent('connect-line', {
+  schema: {
+    start: { type: 'vec3', default: { x: 0, y: 0, z: 0 } },
+    end: { type: 'vec3', default: { x: 1, y: 1, z: 1 } },
+    color: { type: 'color', default: '#ff0000' }
+  },
+  
+  init: function() {
+    const data = this.data;
+    const geometry = new THREE.BufferGeometry();
+    const points = [
+      new THREE.Vector3(data.start.x, data.start.y, data.start.z),
+      new THREE.Vector3(data.end.x, data.end.y, data.end.z)
+    ];
+    geometry.setFromPoints(points);
+    
+    const material = new THREE.LineBasicMaterial({ color: data.color });
+    const line = new THREE.Line(geometry, material);
+    
+    this.el.setObject3D('mesh', line);
+    this.geometry = geometry;  // ジオメトリを保存
+  },
+  
+  update: function(oldData) {
+    const data = this.data;
+    
+    // 開始点と終了点が変わった場合
+    if (oldData.start !== data.start || oldData.end !== data.end) {
+      // 頂点データを更新
+      const positions = this.geometry.attributes.position.array;
+      positions[0] = data.start.x;
+      positions[1] = data.start.y;
+      positions[2] = data.start.z;
+      positions[3] = data.end.x;
+      positions[4] = data.end.y;
+      positions[5] = data.end.z;
+      
+      // 更新フラグを立てる
+      this.geometry.attributes.position.needsUpdate = true;
+    }
+  }
+});
+
 AFRAME.registerComponent('arm-wand-motion-ui', {
   schema:
     { type: 'string', default: "0 0 0:0 0 0" }
@@ -85,6 +128,16 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
     startRobotTip.object3D.position.copy(new THREE.Vector3(0, 1, 0));
     //　ここまでdebug
 
+    // ray
+    this.el.setAttribute('connect-line', {
+      start: '0 0 0', 
+      end: '0 0 0',
+      color: '#ff0000'
+    });
+    this.startWandLength = 1
+    this.angleRation = 1
+    
+
     this.el.addEventListener('triggerdown', (evt) => {
       console.log('### trigger down event. laserVisible: ',
         evt.detail?.originalTarget.laserVisible);
@@ -106,6 +159,9 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
           //debug
           this.startRobotTip.object3D.position.copy(iso3[0]);
           this.controlerToWandTip = isoMultiply(this.vrCtrlStartingPoseInv, this.objStartingPose)
+          // console.log(this.controlerToWandTip[0])
+          // this.startWandLength = this.controlerToWandTip[0].length()
+          // console.log(this.startWandLength)
         }
       }
     });
@@ -152,13 +208,27 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
       //   });
       //   vrCtrlDiffTickFiltered = [filtered.position, filtered.quaternion];
       // }
+      vrCtrlDiffTickFiltered[0] = vrCtrlDiffTickFiltered[0].multiplyScalar(0.5);
+      vrCtrlDiffTickFiltered[1] = scaleQuaternion(vrCtrlDiffTickFiltered[1],0.5)
       
       this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, vrCtrlDiffTickFiltered)
-
+      const wandTipPose = isoMultiply(this.vrCtrlLastFilteredPose, this.controlerToWandTip)
+      
       //debug
       // this.virtualController.object3D.position.copy(this.vrCtrlLastFilteredPose[0]);
       // this.wandTip.object3D.position.copy(wandTipPose[0]);
-      const wandTipPose = isoMultiply(this.vrCtrlLastFilteredPose, this.controlerToWandTip)
+      
+      // ray
+      this.el.setAttribute('connect-line', 'start', vrControllerPose[0]);
+      this.el.setAttribute('connect-line', 'end', wandTipPose[0]);
+      // const wandLength = vrControllerPose[0].clone().sub(wandTipPose[0]).length()
+      // this.angleRation = 0.5 / wandLength
+
+      // debug
+      console.log(2 * Math.acos(Math.min(1, Math.abs(vrCtrlDiffTickFiltered[1].w))))
+      const text = document.querySelector('#debug');
+      text.setAttribute('value',`${ (2 * Math.acos(Math.min(1, Math.abs(vrCtrlDiffTickFiltered[1].w)))).toFixed(3)}`)
+
 
       const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
       this.vrCtrlLastPose = vrControllerPose
@@ -389,6 +459,18 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
     startFrameMarker.object3D.visible = true;
     startFrameMarker.object3D.position.copy(new THREE.Vector3(0, 1, 0));
 
+    // 変位制御追加分
+    this.deadRadius = 0.2
+    const deadzone = document.createElement('a-sphere');
+    this.el.appendChild(deadzone);
+    this.deadzone = deadzone;
+    deadzone.object3D.visible = false;
+    deadzone.setAttribute('geometry', `radius:${this.deadRadius}`);
+    deadzone.setAttribute('material', 'opacity: 0.25');
+    deadzone.addEventListener('loaded', () => {
+      deadzone.getObject3D('mesh').material.depthWrite = false; //透過オブジェクト越しにgltfを見るために必要
+    });
+
     this.el.addEventListener('triggerdown', (evt) => {
       console.log('### trigger down event. laserVisible: ',
         evt.detail?.originalTarget.laserVisible);
@@ -408,6 +490,7 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
           this.vrCtrlLastFilteredPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
           
           this.lastObjPose = this.objStartingPose
+          this.startPose = this.vrCtrlLastPose // deadzoneで使用
           this.startFrameMarker.object3D.position.copy(this.vrCtrlLastPose[0])
           this.startFrameMarker.object3D.quaternion.copy(this.vrCtrlLastPose[1])
         }
@@ -417,6 +500,8 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
       console.log('### trigger up event');
       this.vrControllerEl = evt.detail?.originalTarget;
       this.triggerdownState = false;
+      // 状態提示のsphere
+      this.deadzone.object3D.visible = false;
 
       const iso3 = workerPose(this.el);
       if (iso3) {
@@ -460,6 +545,12 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
       const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
       this.vrCtrlLastPose = vrControllerPose
 
+      const deltaLength = vrControllerDelta[0].length()
+      if(this.deadRadius > deltaLength) return
+      
+      this.deadzone.object3D.visible = true;
+      this.deadzone.object3D.position.copy(this.startPose[0])
+
       // コントローラ座標系合わせ
       const filteredVrCtrlStartingPoseInv = [
         new THREE.Vector3(0, 0, 0),
@@ -474,8 +565,13 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
         vrCtrlToObj[1].clone().conjugate()
       ];
 
-      vrControllerDelta[0] = vrControllerDelta[0].multiplyScalar(0.05);
+      // deadzoneを超えたvectorのみを参照
+      const deadDeltaVector = vrControllerDelta[0].clone().multiplyScalar(this.deadRadius/deltaLength)
+      vrControllerDelta[0].sub(deadDeltaVector).multiplyScalar(0.05);
       vrControllerDelta[1] = scaleQuaternion(vrControllerDelta[1], 0.001)
+
+      // vrControllerDelta[0] = vrControllerDelta[0].multiplyScalar(0.05);
+      // vrControllerDelta[1] = scaleQuaternion(vrControllerDelta[1], 0.001)
       
       this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
         isoMultiply(ObjToVrCtrl,
@@ -504,4 +600,207 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
   }
 });
 
+AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
+  schema:
+    { type: 'string', default: "0 0 0:0 0 0" }
+  ,
+  init: function () {
+    const myColor = this.el.getAttribute('material').color;
+    const frameMarker = document.createElement('a-entity');
+    // target 表示用
+    frameMarker.setAttribute('a-xy-axes-frame', { // 上下逆にしています。
+      length: 0.05,
+      radius: 0.002,
+      sphere: 0.008,
+      opacity: 0.7,
+      color: myColor ? myColor : 'blue',
+    });
+    this.el.appendChild(frameMarker);
+    this.frameMarker = frameMarker;
+    frameMarker.object3D.visible = true;
+    frameMarker.object3D.position.copy(new THREE.Vector3(0, 1, 0));
+    //
+    //
+    this.triggerdownState = false;
+    this.vrControllerEl = null;
+    this.objStartingPose = [new THREE.Vector3(0, 0, 0), new THREE.Quaternion(0, 0, 0, 1)];
+    this.vrCtrlStartingPoseInv = [new THREE.Vector3(0, 0, 0), new THREE.Quaternion(0, 0, 0, 1)];
+    this.worldToBase = [this.el.object3D.position, this.el.object3D.quaternion];
+    this.baseToWorld = isoInvert(this.worldToBase);
+
+    this.vrCtrlLastPose = [new THREE.Vector3(0, 0, 0), new THREE.Quaternion(0, 0, 0, 1)];
+    this.vrCtrlLastFilteredPose = [new THREE.Vector3(0, 0, 0), new THREE.Quaternion(0, 0, 0, 1)];
+
+    // startingPose
+    const startFrameMarker = document.createElement('a-entity');
+    startFrameMarker.setAttribute('a-xy-axes-frame', { // 上下逆にしています。
+      length: 0.1,
+      radius: 0.004,
+      sphere: 0.016,
+      opacity: 0.7,
+      color: myColor ? myColor : 'blue',
+    });
+    this.el.appendChild(startFrameMarker);
+    this.startFrameMarker = startFrameMarker;
+    startFrameMarker.object3D.visible = true;
+    startFrameMarker.object3D.position.copy(new THREE.Vector3(0, 1, 0));
+
+    // 変位制御追加分
+    this.deadRadius = 0.2
+    const deadzone = document.createElement('a-sphere');
+    this.el.appendChild(deadzone);
+    this.deadzone = deadzone;
+    deadzone.object3D.visible = false;
+    deadzone.setAttribute('geometry', `radius:${this.deadRadius}`);
+    deadzone.setAttribute('material', 'opacity: 0.25');
+    deadzone.addEventListener('loaded', () => {
+      deadzone.getObject3D('mesh').material.depthWrite = false; //透過オブジェクト越しにgltfを見るために必要
+    });
+    this.el.setAttribute('connect-line', {
+      start: '0 0 0', 
+      end: '0 0 0',
+      color: '#ff0000'
+    });
+
+    this.el.addEventListener('triggerdown', (evt) => {
+      console.log('### trigger down event. laserVisible: ',
+        evt.detail?.originalTarget.laserVisible);
+      const ctrlEl = evt.detail?.originalTarget;
+      this.vrControllerEl = ctrlEl;
+      if (!this.vrControllerEl.laserVisible) {
+        if (this?.returnTimerId) clearTimeout(this.returnTimerId);
+        this.triggerdownState = true;
+        const iso3 = workerPose(this.el);
+        if (iso3 && ctrlEl) {
+          this.objStartingPose = iso3;
+          this.vrCtrlStartingPoseInv
+            = isoMultiply(isoInvert([ctrlEl.object3D.position,
+            ctrlEl.object3D.quaternion]),
+              this.worldToBase);
+          this.vrCtrlLastPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
+          this.vrCtrlLastFilteredPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
+          
+          this.lastObjPose = this.objStartingPose
+          this.deadzone.object3D.position.copy(this.vrCtrlLastPose[0]) // displacement
+          this.startFrameMarker.object3D.position.copy(this.vrCtrlLastPose[0])
+          this.startFrameMarker.object3D.quaternion.copy(this.vrCtrlLastPose[1])
+        }
+      }
+    });
+    this.el.addEventListener('triggerup', (evt) => {
+      console.log('### trigger up event');
+      this.vrControllerEl = evt.detail?.originalTarget;
+      this.triggerdownState = false;
+      // 状態提示のsphere
+      this.deadzone.object3D.visible = false;
+
+      const iso3 = workerPose(this.el);
+      if (iso3) {
+        const frameMarkerResetFunc = () => {
+          this.frameMarker.object3D.position.copy(iso3[0]);
+          this.frameMarker.object3D.quaternion.copy(iso3[1]);
+        }
+        this.returnTimerId = setTimeout(frameMarkerResetFunc, 2000);
+      }
+    });
+  },
+
+  // ********
+  tick: function (time, deltatime) {
+    if (!this.el?.shouldListenEvents) return;
+    const ctrlEl = this?.vrControllerEl;
+    if (!ctrlEl || !this.el.workerData || !this.el.workerRef) {
+      //      console.warn('workerData, workerRef or controller not ready yet.');
+      return;
+    }
+    if (this.triggerdownState && ~ctrlEl.laserVisible) {
+      const vrControllerPose = isoMultiply(this.baseToWorld,
+        [ctrlEl.object3D.position,
+        ctrlEl.object3D.quaternion]);
+
+      const vrCtrlLastPoseInv = isoInvert(this.vrCtrlLastPose)
+      const vrCtrlDiffTick = isoMultiply(vrCtrlLastPoseInv, vrControllerPose)
+      let vrCtrlDiffTickFiltered = [vrCtrlDiffTick[0], vrCtrlDiffTick[1]]
+      // 可変スケールはできるけどしない
+      // const motionFiltering = this.el.components['motion-dynamic-filter'];
+      // if (motionFiltering) {
+      //   const filtered = motionFiltering.applyFilters({
+      //     detail: {
+      //       position: vrCtrlDiffTick[0],
+      //       quaternion: vrCtrlDiffTick[1],
+      //       deltatime: deltatime
+      //     }
+      //   });
+      //   vrCtrlDiffTickFiltered = [filtered.position, filtered.quaternion];
+      // }
+      vrCtrlDiffTickFiltered[0].multiplyScalar(0.5);
+      vrCtrlDiffTickFiltered[1] = scaleQuaternion(vrCtrlDiffTickFiltered[1], 0.5)
+      this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, vrCtrlDiffTickFiltered)
+
+      const vrCtrlStartToLast = isoMultiply(this.vrCtrlStartingPoseInv, vrControllerPose) //スケーリングしていないコントローラ差分(腕の可動域)でデッドゾーンは決める
+      const deltaLength = vrCtrlStartToLast[0].length()
+      this.vrCtrlLastPose = vrControllerPose
+
+      // 手先姿勢座標系での差分表現
+      const filteredVrCtrlStartingPoseInv = [
+        new THREE.Vector3(0, 0, 0),
+        vrCtrlStartToLast[1].clone().multiply(vrControllerPose[1].clone().conjugate())
+      ];
+      const vrCtrlToObj = [
+        new THREE.Vector3(0, 0, 0),
+        filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
+      ];
+      const ObjToVrCtrl = [
+        new THREE.Vector3(0, 0, 0),
+        vrCtrlToObj[1].clone().conjugate()
+      ];
+
+      let newObjPose = [new THREE.Vector3, new THREE.Quaternion]
+      if(this.deadRadius > deltaLength){
+        // mimic操作
+
+        // GUI関連実装予定
+
+        // 目標姿勢
+        this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
+          isoMultiply(ObjToVrCtrl,
+            vrCtrlDiffTick)),
+          vrCtrlToObj);
+        newObjPose = this.lastObjPose
+      } else {
+        // displacement操作
+        this.deadzone.object3D.visible = true; //透明度変化，vibeとか？
+
+        // deadzoneを超えたvectorのみを参照
+        const deadDeltaVector = vrCtrlStartToLast[0].clone().multiplyScalar(this.deadRadius/deltaLength)
+        vrCtrlStartToLast[0].sub(deadDeltaVector).multiplyScalar(0.05);
+        vrCtrlStartToLast[1] = scaleQuaternion(vrCtrlStartToLast[1], 0.001)
+        // 目標姿勢
+        this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
+          isoMultiply(ObjToVrCtrl,
+            vrCtrlStartToLast)),
+          vrCtrlToObj);
+        newObjPose = this.lastObjPose
+
+      }
+       
+      this.frameMarker.object3D.position.copy(newObjPose[0]);
+      this.frameMarker.object3D.quaternion.copy(newObjPose[1]);
+      
+      const m4 = new THREE.Matrix4();
+      m4.compose(newObjPose[0], newObjPose[1], new THREE.Vector3(1, 1, 1));
+      this.el.workerRef?.current?.postMessage({
+        type: 'destination',
+        endLinkPose: m4.elements
+      });
+    }
+  },
+  update: function (oldData) {
+    console.log("Update armUI", oldData)
+    if (oldData != undefined) {// 初回のupdate以外
+      this.worldToBase = [this.el.object3D.position, this.el.object3D.quaternion];
+      this.baseToWorld = isoInvert(this.worldToBase);
+    }
+  }
+});
 
