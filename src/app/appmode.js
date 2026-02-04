@@ -26,7 +26,8 @@ export function isControlMode(appmode) {
 export function isCameraMode(appmode) {
   return (
           appmode === AppMode.withCam ||
-          appmode === AppMode.withDualCam);
+          appmode === AppMode.withDualCam ||
+          appmode === AppMode.develop);
 }
 
 export function isNonControlMode(appmode) {

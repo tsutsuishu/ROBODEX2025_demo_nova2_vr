@@ -742,33 +742,58 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       this.vrCtrlLastPose = vrControllerPose
 
       // 手先姿勢座標系での差分表現
-      const filteredVrCtrlStartingPoseInv = [
-        new THREE.Vector3(0, 0, 0),
-        vrCtrlStartToLast[1].clone().multiply(vrControllerPose[1].clone().conjugate())
-      ];
-      const vrCtrlToObj = [
-        new THREE.Vector3(0, 0, 0),
-        filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
-      ];
-      const ObjToVrCtrl = [
-        new THREE.Vector3(0, 0, 0),
-        vrCtrlToObj[1].clone().conjugate()
-      ];
+      // const filteredVrCtrlStartingPoseInv = [
+      //   new THREE.Vector3(0, 0, 0),
+      //   vrCtrlStartToLast[1].clone().multiply(vrControllerPose[1].clone().conjugate())
+      // ];
+      // const vrCtrlToObj = [
+      //   new THREE.Vector3(0, 0, 0),
+      //   filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
+      // ];
+      // const ObjToVrCtrl = [
+      //   new THREE.Vector3(0, 0, 0),
+      //   vrCtrlToObj[1].clone().conjugate()
+      // ];
 
       let newObjPose = [new THREE.Vector3, new THREE.Quaternion]
       if(this.deadRadius > deltaLength){
         // mimic操作
+        const filteredVrCtrlStartingPoseInv = [
+          new THREE.Vector3(0, 0, 0),
+          vrCtrlStartToLast[1].clone().multiply(vrControllerPose[1].clone().conjugate())
+        ];
+        const vrCtrlToObj = [
+          new THREE.Vector3(0, 0, 0),
+          filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
+        ];
+        const ObjToVrCtrl = [
+          new THREE.Vector3(0, 0, 0),
+          vrCtrlToObj[1].clone().conjugate()
+        ];
 
         // GUI関連実装予定
 
         // 目標姿勢
         this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
           isoMultiply(ObjToVrCtrl,
-            vrCtrlDiffTick)),
+            vrCtrlDiffTickFiltered)),
           vrCtrlToObj);
         newObjPose = this.lastObjPose
       } else {
         // displacement操作
+        const filteredVrCtrlStartingPoseInv = [
+          new THREE.Vector3(0, 0, 0),
+          vrCtrlStartToLast[1].clone().multiply(this.vrCtrlLastFilteredPose[1].clone().conjugate())
+        ];
+        const vrCtrlToObj = [
+          new THREE.Vector3(0, 0, 0),
+          filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
+        ];
+        const ObjToVrCtrl = [
+          new THREE.Vector3(0, 0, 0),
+          vrCtrlToObj[1].clone().conjugate()
+        ];
+
         this.deadzone.object3D.visible = true; //透明度変化，vibeとか？
 
         // deadzoneを超えたvectorのみを参照
