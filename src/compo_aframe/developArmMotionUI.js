@@ -647,12 +647,15 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
 
     // 変位制御追加分
     this.deadRadius = 0.2
+    this.deadzonePose = [new THREE.Vector3, new THREE.Quaternion]
     const deadzone = document.createElement('a-sphere');
     this.el.appendChild(deadzone);
     this.deadzone = deadzone;
     deadzone.object3D.visible = false;
-    deadzone.setAttribute('geometry', `radius:${this.deadRadius}`);
-    deadzone.setAttribute('material', 'opacity: 0.25');
+    // deadzone.setAttribute('geometry', `radius:${this.deadRadius}`);
+    deadzone.setAttribute('geometry', `radius:0.2`);
+    // deadzone.setAttribute('material', 'opacity: 0.25');
+    deadzone.setAttribute('material', 'opacity: 1');
     deadzone.addEventListener('loaded', () => {
       deadzone.getObject3D('mesh').material.depthWrite = false; //透過オブジェクト越しにgltfを見るために必要
     });
@@ -681,7 +684,11 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
           this.vrCtrlLastFilteredPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
           
           this.lastObjPose = this.objStartingPose
-          this.deadzone.object3D.position.copy(this.vrCtrlLastPose[0]) // displacement
+
+          this.deadzonePose = iso3
+          this.deadzone.object3D.position.copy(this.deadzonePose[0]) // displacement
+          this.deadzone.object3D.visible = true; //透明度変化，vibeとか？
+
           this.startFrameMarker.object3D.position.copy(this.vrCtrlLastPose[0])
           this.startFrameMarker.object3D.quaternion.copy(this.vrCtrlLastPose[1])
         }
@@ -794,7 +801,6 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
           vrCtrlToObj[1].clone().conjugate()
         ];
 
-        this.deadzone.object3D.visible = true; //透明度変化，vibeとか？
 
         // deadzoneを超えたvectorのみを参照
         const deadDeltaVector = vrCtrlStartToLast[0].clone().multiplyScalar(this.deadRadius/deltaLength)
@@ -807,6 +813,11 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
           vrCtrlToObj);
         newObjPose = this.lastObjPose
 
+        this.deadzonePose = isoMultiply(isoMultiply(this.deadzonePose,
+          isoMultiply(ObjToVrCtrl,
+            vrCtrlStartToLast)),
+          vrCtrlToObj);
+        this.deadzone.object3D.position.copy(this.deadzonePose[0])
       }
        
       this.frameMarker.object3D.position.copy(newObjPose[0]);
