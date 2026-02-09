@@ -80,7 +80,9 @@ export default function Home(props) {
   }, []);
   // base_position, base_rotation 更新
   React.useEffect(() => {
-    setBasePosition(`${vrModeOffsetX} 0.75 -0.8`);
+    // setBasePosition(`${vrModeOffsetX} 0.75 -0.8`);
+    // setBaseRotation(`-90 ${vrModeAngle} 0`);
+    setBasePosition(`${vrModeOffsetX-0.175} 0.975 -0.52`);
     setBaseRotation(`-90 ${vrModeAngle} 0`);
     console.log("Home base_pos, rotation:", base_position, base_rotation);
   }, [vrModeAngle, vrModeOffsetX]);
