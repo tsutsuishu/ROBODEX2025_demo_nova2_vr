@@ -24,8 +24,8 @@ AFRAME.registerComponent('connect-line', {
     end: { type: 'vec3', default: { x: 1, y: 1, z: 1 } },
     color: { type: 'color', default: '#ff0000' }
   },
-  
-  init: function() {
+
+  init: function () {
     const data = this.data;
     const geometry = new THREE.BufferGeometry();
     const points = [
@@ -33,17 +33,17 @@ AFRAME.registerComponent('connect-line', {
       new THREE.Vector3(data.end.x, data.end.y, data.end.z)
     ];
     geometry.setFromPoints(points);
-    
+
     const material = new THREE.LineBasicMaterial({ color: data.color });
     const line = new THREE.Line(geometry, material);
-    
+
     this.el.setObject3D('mesh', line);
     this.geometry = geometry;  // ジオメトリを保存
   },
-  
-  update: function(oldData) {
+
+  update: function (oldData) {
     const data = this.data;
-    
+
     // 開始点と終了点が変わった場合
     if (oldData.start !== data.start || oldData.end !== data.end) {
       // 頂点データを更新
@@ -54,7 +54,7 @@ AFRAME.registerComponent('connect-line', {
       positions[3] = data.end.x;
       positions[4] = data.end.y;
       positions[5] = data.end.z;
-      
+
       // 更新フラグを立てる
       this.geometry.attributes.position.needsUpdate = true;
     }
@@ -130,13 +130,13 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
 
     // ray
     this.el.setAttribute('connect-line', {
-      start: '0 0 0', 
+      start: '0 0 0',
       end: '0 0 0',
       color: '#ff0000'
     });
     this.startWandLength = 1
     this.angleRation = 1
-    
+
 
     this.el.addEventListener('triggerdown', (evt) => {
       console.log('### trigger down event. laserVisible: ',
@@ -209,15 +209,15 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
       //   vrCtrlDiffTickFiltered = [filtered.position, filtered.quaternion];
       // }
       vrCtrlDiffTickFiltered[0] = vrCtrlDiffTickFiltered[0].multiplyScalar(0.5);
-      vrCtrlDiffTickFiltered[1] = scaleQuaternion(vrCtrlDiffTickFiltered[1],0.5)
-      
+      vrCtrlDiffTickFiltered[1] = scaleQuaternion(vrCtrlDiffTickFiltered[1], 0.5)
+
       this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, vrCtrlDiffTickFiltered)
       const wandTipPose = isoMultiply(this.vrCtrlLastFilteredPose, this.controlerToWandTip)
-      
+
       //debug
       // this.virtualController.object3D.position.copy(this.vrCtrlLastFilteredPose[0]);
       // this.wandTip.object3D.position.copy(wandTipPose[0]);
-      
+
       // ray
       this.el.setAttribute('connect-line', 'start', vrControllerPose[0]);
       this.el.setAttribute('connect-line', 'end', wandTipPose[0]);
@@ -227,12 +227,12 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
       // debug
       console.log(2 * Math.acos(Math.min(1, Math.abs(vrCtrlDiffTickFiltered[1].w))))
       const text = document.querySelector('#debug');
-      text.setAttribute('value',`${ (2 * Math.acos(Math.min(1, Math.abs(vrCtrlDiffTickFiltered[1].w)))).toFixed(3)}`)
+      text.setAttribute('value', `${(2 * Math.acos(Math.min(1, Math.abs(vrCtrlDiffTickFiltered[1].w)))).toFixed(3)}`)
 
 
       const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
       this.vrCtrlLastPose = vrControllerPose
-      
+
       const filteredVrCtrlStartingPoseInv = [
         new THREE.Vector3(0, 0, 0),
         vrControllerDelta[1].clone().multiply(vrControllerPose[1].clone().conjugate())
@@ -255,7 +255,7 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
       // newObjPose[1] = wandTipPose[1]
       // debug
       // this.robotTip.object3D.position.copy(newObjPose[0]);
-      
+
       this.frameMarker.object3D.position.copy(newObjPose[0]);
       this.frameMarker.object3D.quaternion.copy(newObjPose[1]);
       const m4 = new THREE.Matrix4();
@@ -274,7 +274,7 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
     }
   }
 });
- 
+
 AFRAME.registerComponent('arm-motion-inertia', {
   schema:
     { type: 'string', default: "0 0 0:0 0 0" }
@@ -333,8 +333,8 @@ AFRAME.registerComponent('arm-motion-inertia', {
         this.returnTimerId = setTimeout(frameMarkerResetFunc, 2000);
         this.objStartingPose = iso3;
         this.vrCtrlStartingPoseInv = isoMultiply(isoInvert([ctrlEl.object3D.position,
-          ctrlEl.object3D.quaternion]),
-        this.worldToBase);
+        ctrlEl.object3D.quaternion]),
+          this.worldToBase);
 
         this.isAutoMoving = true
         this.autoDiffTickInitialized = false
@@ -349,13 +349,13 @@ AFRAME.registerComponent('arm-motion-inertia', {
       // console.warn('workerData, workerRef or controller not ready yet.');
       return;
     }
-    if(this.isAutoMoving){
-      if(!this.autoDiffTickInitialized){
+    if (this.isAutoMoving) {
+      if (!this.autoDiffTickInitialized) {
         const vrControllerPose = isoMultiply(this.baseToWorld,
           [ctrlEl.object3D.position,
-        ctrlEl.object3D.quaternion]);
-        
-        if(!this.lastPoseInitialized){
+          ctrlEl.object3D.quaternion]);
+
+        if (!this.lastPoseInitialized) {
           this.vrCtrlLastFilteredPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
           this.vrCtrlLastPose = vrControllerPose
           this.lastPoseInitialized = true
@@ -366,7 +366,7 @@ AFRAME.registerComponent('arm-motion-inertia', {
         const vrCtrlLastPoseInv = isoInvert(this.vrCtrlLastPose)
         this.autoDiffTick = isoMultiply(vrCtrlLastPoseInv, vrControllerPose)
 
-        if(this.autoDiffTick[0].length() / deltatime > this.autoVelocityThreshold){
+        if (this.autoDiffTick[0].length() / deltatime > this.autoVelocityThreshold) {
           this.autoDiffTickInitialized = true
           this.frameMarker.object3D.visible = true
           // 動作強調フィルタ系を使うならここで this.autoDiffTick に適用すべき
@@ -375,7 +375,7 @@ AFRAME.registerComponent('arm-motion-inertia', {
           return
         }
       }
-      
+
       this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, [this.autoDiffTick[0], new THREE.Quaternion(0, 0, 0, 1)])
       const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
 
@@ -488,7 +488,7 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
               this.worldToBase);
           this.vrCtrlLastPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
           this.vrCtrlLastFilteredPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
-          
+
           this.lastObjPose = this.objStartingPose
           this.startPose = this.vrCtrlLastPose // deadzoneで使用
           this.startFrameMarker.object3D.position.copy(this.vrCtrlLastPose[0])
@@ -546,8 +546,8 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
       this.vrCtrlLastPose = vrControllerPose
 
       const deltaLength = vrControllerDelta[0].length()
-      if(this.deadRadius > deltaLength) return
-      
+      if (this.deadRadius > deltaLength) return
+
       this.deadzone.object3D.visible = true;
       this.deadzone.object3D.position.copy(this.startPose[0])
 
@@ -566,23 +566,23 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
       ];
 
       // deadzoneを超えたvectorのみを参照
-      const deadDeltaVector = vrControllerDelta[0].clone().multiplyScalar(this.deadRadius/deltaLength)
+      const deadDeltaVector = vrControllerDelta[0].clone().multiplyScalar(this.deadRadius / deltaLength)
       vrControllerDelta[0].sub(deadDeltaVector).multiplyScalar(0.05);
       vrControllerDelta[1] = scaleQuaternion(vrControllerDelta[1], 0.001)
 
       // vrControllerDelta[0] = vrControllerDelta[0].multiplyScalar(0.05);
       // vrControllerDelta[1] = scaleQuaternion(vrControllerDelta[1], 0.001)
-      
+
       this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
         isoMultiply(ObjToVrCtrl,
           vrControllerDelta)),
-        vrCtrlToObj); 
-  
+        vrCtrlToObj);
+
       const newObjPose = this.lastObjPose
-       
+
       this.frameMarker.object3D.position.copy(newObjPose[0]);
       this.frameMarker.object3D.quaternion.copy(newObjPose[1]);
-      
+
       const m4 = new THREE.Matrix4();
       m4.compose(newObjPose[0], newObjPose[1], new THREE.Vector3(1, 1, 1));
       this.el.workerRef?.current?.postMessage({
@@ -645,25 +645,39 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
     startFrameMarker.object3D.visible = true;
     startFrameMarker.object3D.position.copy(new THREE.Vector3(0, 1, 0));
 
+    this.ControlMode = {
+      mimic:"mimic",
+      displacement:"displacement"
+    }
+    this.controlMode = this.ControlMode.mimic
+    this.control
     // 変位制御追加分
     this.deadRadius = 0.2
     this.deadzonePose = [new THREE.Vector3, new THREE.Quaternion]
+    // robotTipBubble
     const deadzone = document.createElement('a-sphere');
     this.el.appendChild(deadzone);
     this.deadzone = deadzone;
     deadzone.object3D.visible = false;
     // deadzone.setAttribute('geometry', `radius:${this.deadRadius}`);
-    deadzone.setAttribute('geometry', `radius:0.2`);
-    // deadzone.setAttribute('material', 'opacity: 0.25');
-    deadzone.setAttribute('material', 'opacity: 1');
+    deadzone.setAttribute('geometry', `radius:0.1`);
+    deadzone.setAttribute('material', 'opacity: 0.5');
     deadzone.addEventListener('loaded', () => {
       deadzone.getObject3D('mesh').material.depthWrite = false; //透過オブジェクト越しにgltfを見るために必要
     });
-    this.el.setAttribute('connect-line', {
-      start: '0 0 0', 
-      end: '0 0 0',
-      color: '#ff0000'
+
+    // handBubble
+    const handDeadzone = document.createElement('a-sphere');
+    this.el.appendChild(handDeadzone);
+    this.handDeadzone = handDeadzone;
+    handDeadzone.object3D.visible = false;
+    handDeadzone.setAttribute('geometry', `radius:${this.deadRadius}`);
+    handDeadzone.setAttribute('material', 'opacity: 0.25');
+    handDeadzone.setAttribute('material', 'opacity: 1');
+    handDeadzone.addEventListener('loaded', () => {
+      handDeadzone.getObject3D('mesh').material.depthWrite = false; //透過オブジェクト越しにgltfを見るために必要
     });
+    
 
     this.el.addEventListener('triggerdown', (evt) => {
       console.log('### trigger down event. laserVisible: ',
@@ -680,14 +694,25 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
             = isoMultiply(isoInvert([ctrlEl.object3D.position,
             ctrlEl.object3D.quaternion]),
               this.worldToBase);
+
+          // VRcontroller周りのバブルの基準用(triggerを押してからは離すまで更新なし．)
+          this.bubbleCenterPoseInv
+            = isoMultiply(isoInvert([ctrlEl.object3D.position,
+            ctrlEl.object3D.quaternion]),
+              this.worldToBase);
+          
+
           this.vrCtrlLastPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
           this.vrCtrlLastFilteredPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
-          
+
           this.lastObjPose = this.objStartingPose
 
+          //手先のバブルモデル用
           this.deadzonePose = iso3
           this.deadzone.object3D.position.copy(this.deadzonePose[0]) // displacement
           this.deadzone.object3D.visible = true; //透明度変化，vibeとか？
+
+          this.handDeadzone.object3D.position.copy(this.vrCtrlLastPose[0] ) // displacement
 
           this.startFrameMarker.object3D.position.copy(this.vrCtrlLastPose[0])
           this.startFrameMarker.object3D.quaternion.copy(this.vrCtrlLastPose[1])
@@ -699,7 +724,7 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       this.vrControllerEl = evt.detail?.originalTarget;
       this.triggerdownState = false;
       // 状態提示のsphere
-      this.deadzone.object3D.visible = false;
+      // this.deadzone.object3D.visible = false;
 
       const iso3 = workerPose(this.el);
       if (iso3) {
@@ -724,8 +749,24 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       const vrControllerPose = isoMultiply(this.baseToWorld,
         [ctrlEl.object3D.position,
         ctrlEl.object3D.quaternion]);
+  
+      const vrCtrlStartToLast = isoMultiply(this.bubbleCenterPoseInv, vrControllerPose) //スケーリングしていないコントローラ差分(腕の可動域)でデッドゾーンは決める
+      const deltaLength = vrCtrlStartToLast[0].length()
+      
+      const newMode = this.deadRadius > deltaLength ? this.ControlMode.mimic : this.ControlMode.displacement;
+      if (this.controlMode !== newMode) {
+        this.controlMode = newMode;
+        // 初期化
+        this.objStartingPose = this.lastObjPose;
+        this.vrCtrlStartingPoseInv = isoMultiply(isoInvert([ctrlEl.object3D.position,ctrlEl.object3D.quaternion]), this.worldToBase); 
+        this.vrCtrlLastPose = vrControllerPose
+        this.vrCtrlLastFilteredPose = vrControllerPose
+        this.lastObjPose = this.objStartingPose
+        return
+      }
 
       const vrCtrlLastPoseInv = isoInvert(this.vrCtrlLastPose)
+      this.vrCtrlLastPose = vrControllerPose
       const vrCtrlDiffTick = isoMultiply(vrCtrlLastPoseInv, vrControllerPose)
       let vrCtrlDiffTickFiltered = [vrCtrlDiffTick[0], vrCtrlDiffTick[1]]
       // 可変スケールはできるけどしない
@@ -740,34 +781,18 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       //   });
       //   vrCtrlDiffTickFiltered = [filtered.position, filtered.quaternion];
       // }
+
       vrCtrlDiffTickFiltered[0].multiplyScalar(0.5);
       vrCtrlDiffTickFiltered[1] = scaleQuaternion(vrCtrlDiffTickFiltered[1], 0.5)
       this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, vrCtrlDiffTickFiltered)
 
-      const vrCtrlStartToLast = isoMultiply(this.vrCtrlStartingPoseInv, vrControllerPose) //スケーリングしていないコントローラ差分(腕の可動域)でデッドゾーンは決める
-      const deltaLength = vrCtrlStartToLast[0].length()
-      this.vrCtrlLastPose = vrControllerPose
-
-      // 手先姿勢座標系での差分表現
-      // const filteredVrCtrlStartingPoseInv = [
-      //   new THREE.Vector3(0, 0, 0),
-      //   vrCtrlStartToLast[1].clone().multiply(vrControllerPose[1].clone().conjugate())
-      // ];
-      // const vrCtrlToObj = [
-      //   new THREE.Vector3(0, 0, 0),
-      //   filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
-      // ];
-      // const ObjToVrCtrl = [
-      //   new THREE.Vector3(0, 0, 0),
-      //   vrCtrlToObj[1].clone().conjugate()
-      // ];
-
       let newObjPose = [new THREE.Vector3, new THREE.Quaternion]
-      if(this.deadRadius > deltaLength){
+      if (this.controlMode == "mimic") {
         // mimic操作
+        // 手先姿勢座標系での差分表現
         const filteredVrCtrlStartingPoseInv = [
           new THREE.Vector3(0, 0, 0),
-          vrCtrlStartToLast[1].clone().multiply(vrControllerPose[1].clone().conjugate())
+          vrCtrlStartToLast[1].clone().multiply(this.vrCtrlLastFilteredPose[1].clone().conjugate())
         ];
         const vrCtrlToObj = [
           new THREE.Vector3(0, 0, 0),
@@ -785,12 +810,21 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
           isoMultiply(ObjToVrCtrl,
             vrCtrlDiffTickFiltered)),
           vrCtrlToObj);
+        this.lastObjPose[1].normalize();
         newObjPose = this.lastObjPose
+
+        // bubble表示位置
+        vrCtrlDiffTickFiltered[0] = new THREE.Vector3(0,0,0)
+        this.deadzonePose = isoMultiply(isoMultiply(this.deadzonePose,
+          isoMultiply(ObjToVrCtrl,
+            vrCtrlDiffTickFiltered)),
+          vrCtrlToObj);
+        this.deadzonePose[1].normalize();
       } else {
         // displacement操作
         const filteredVrCtrlStartingPoseInv = [
           new THREE.Vector3(0, 0, 0),
-          vrCtrlStartToLast[1].clone().multiply(this.vrCtrlLastFilteredPose[1].clone().conjugate())
+          vrCtrlStartToLast[1].clone().multiply(vrControllerPose[1].clone().conjugate())
         ];
         const vrCtrlToObj = [
           new THREE.Vector3(0, 0, 0),
@@ -801,28 +835,53 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
           vrCtrlToObj[1].clone().conjugate()
         ];
 
-
         // deadzoneを超えたvectorのみを参照
-        const deadDeltaVector = vrCtrlStartToLast[0].clone().multiplyScalar(this.deadRadius/deltaLength)
+        const deadDeltaVector = vrCtrlStartToLast[0].clone().multiplyScalar(this.deadRadius / deltaLength)
         vrCtrlStartToLast[0].sub(deadDeltaVector).multiplyScalar(0.05);
         vrCtrlStartToLast[1] = scaleQuaternion(vrCtrlStartToLast[1], 0.001)
-        // 目標姿勢
+
         this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
           isoMultiply(ObjToVrCtrl,
             vrCtrlStartToLast)),
           vrCtrlToObj);
+        this.lastObjPose[1].normalize();
         newObjPose = this.lastObjPose
 
         this.deadzonePose = isoMultiply(isoMultiply(this.deadzonePose,
           isoMultiply(ObjToVrCtrl,
             vrCtrlStartToLast)),
           vrCtrlToObj);
+        this.deadzonePose[1].normalize();
         this.deadzone.object3D.position.copy(this.deadzonePose[0])
+        this.deadzone.object3D.quaternion.copy(this.deadzonePose[1])
+      
+
+        // let StartToLast = isoMultiply(this.vrCtrlStartingPoseInv, vrControllerPose) //スケーリングしていないコントローラ差分(腕の可動域)でデッドゾーンは決める
+        // StartToLast[0].multiplyScalar(0.05);
+        // StartToLast[1] = scaleQuaternion(StartToLast[1], 0.001)
+        
+        // this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
+        //   isoMultiply(ObjToVrCtrl,
+        //     StartToLast)),
+        //   vrCtrlToObj);
+        // this.lastObjPose[1].normalize();
+        // newObjPose = this.lastObjPose
+
+        // this.deadzonePose = isoMultiply(isoMultiply(this.deadzonePose,
+        //   isoMultiply(ObjToVrCtrl,
+        //     StartToLast)),
+        //   vrCtrlToObj);
+        // this.deadzonePose[1].normalize();
+        // this.deadzone.object3D.position.copy(this.deadzonePose[0])
+        // this.deadzone.object3D.quaternion.copy(this.deadzonePose[1])
+
       }
-       
+
       this.frameMarker.object3D.position.copy(newObjPose[0]);
       this.frameMarker.object3D.quaternion.copy(newObjPose[1]);
-      
+      console.log(`target x:${newObjPose[0].x} y:${newObjPose[0].y} z:${newObjPose[0].z} \n x:${newObjPose[1].x} y:${newObjPose[1].y} z:${newObjPose[1].z} w:${newObjPose[1].w}`)
+      console.log(`target ${newObjPose[1]}`)
+
       const m4 = new THREE.Matrix4();
       m4.compose(newObjPose[0], newObjPose[1], new THREE.Vector3(1, 1, 1));
       this.el.workerRef?.current?.postMessage({
