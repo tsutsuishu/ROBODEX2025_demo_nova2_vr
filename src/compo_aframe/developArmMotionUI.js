@@ -702,11 +702,11 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
             = isoMultiply(isoInvert([ctrlEl.object3D.position,
             ctrlEl.object3D.quaternion]),
               this.worldToBase);
-
-
+          this.bubbleCenterPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
 
           //手先のバブルモデル用
           this.robotBubbleCenterPose = iso3
+          this.robotBubbleStartingPose = iso3
           this.robotBubble.object3D.position.copy(this.robotBubbleCenterPose[0]) // displacement
           // this.robotBubble.object3D.visible = true; //透明度変化，vibeとか？
 
@@ -753,6 +753,51 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
 
       const newMode = this.deadRadius > deltaLength ? this.ControlMode.mimic : this.ControlMode.displacement;
       if (this.controlMode !== newMode) {
+        if(this.controlMode == this.ControlMode.displacement && newMode == this.ControlMode.mimic){
+          //ロボット手先バブルの位置をコントローラと一致ように更新
+          // vrCtrlStartToLast
+          const controllerBubbleSurfaceToCenterNew = isoInvert(vrCtrlStartToLast)
+          const controllerBubbleSurfaceToCenter = isoMultiply(isoInvert(vrControllerPose), this.bubbleCenterPose)
+          console.log(`test ${controllerBubbleSurfaceToCenterNew === controllerBubbleSurfaceToCenter}`)
+          controllerBubbleSurfaceToCenter[0].multiplyScalar(0.5);
+          controllerBubbleSurfaceToCenter[1] = scaleQuaternion(controllerBubbleSurfaceToCenter[1], 0.5)
+          // this.robotBubbleCenterPose = isoMultiply(this.lastObjPose, controllerBubbleSurfaceToCenter)
+
+          const vrControllerInv = isoInvert(vrControllerPose)
+
+          const vrCtrlToObj = [
+            new THREE.Vector3(0, 0, 0),
+            vrControllerInv[1].clone().multiply(this.lastObjPose[1])
+          ];
+          const ObjToVrCtrl = [
+            new THREE.Vector3(0, 0, 0),
+            vrCtrlToObj[1].clone().conjugate()
+          ];
+          
+          this.robotBubbleCenterPose = isoMultiply(isoMultiply(this.lastObjPose,
+            isoMultiply(ObjToVrCtrl,
+              controllerBubbleSurfaceToCenter)),
+            vrCtrlToObj);
+          
+          
+
+          // // GUI関連実装予定
+
+          // // 目標姿勢
+  
+          
+
+
+
+
+
+
+
+          this.robotBubble.object3D.position.copy(this.robotBubbleCenterPose[0])
+          this.robotBubble.object3D.quaternion.copy(this.robotBubbleCenterPose[1])
+
+
+        }
         this.controlMode = newMode;
         // 初期化
         this.objStartingPose = this.lastObjPose;
@@ -761,9 +806,10 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
         this.vrCtrlLastFilteredPose = vrControllerPose
         this.lastObjPose = this.objStartingPose
 
+        this.robotBubbleStartingPose = this.robotBubbleCenterPose
         // this.robotBubble.object3D.visible  = (newMode == this.ControlMode.displacement)
         this.robotBubble.object3D.visible = true
-        return
+        // return
       }
 
       const vrCtrlLastPoseInv = isoInvert(this.vrCtrlLastPose)
@@ -837,10 +883,12 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
 
         // bubble表示姿勢(位置の更新はないけど，回転成分は更新する)．これも操作切り替え前の一発でOK
         const robotBubbleDelta = [new THREE.Vector3(0, 0, 0), vrControllerDelta[1]]
-        this.robotBubbleCenterPose = isoMultiply(isoMultiply(this.objStartingPose,
+        this.robotBubbleCenterPose = isoMultiply(isoMultiply(this.robotBubbleStartingPose,
           isoMultiply(ObjToVrCtrl,
             robotBubbleDelta)),
           vrCtrlToObj);
+        this.robotBubble.object3D.position.copy(this.robotBubbleCenterPose[0])
+        this.robotBubble.object3D.quaternion.copy(this.robotBubbleCenterPose[1])
         // deltaを使ってstartからの姿勢計算を行うため，毎回計算をする必要がない．(累積部分はvrCtrlLastFilteredPoseで計算)
       } else {
         // displacement操作
@@ -875,7 +923,7 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
           vrCtrlToObj);
         this.robotBubbleCenterPose[1].normalize();
         this.robotBubble.object3D.position.copy(this.robotBubbleCenterPose[0])
-        // this.robotBubble.object3D.quaternion.copy(this.robotBubbleCenterPose[1])
+        this.robotBubble.object3D.quaternion.copy(this.robotBubbleCenterPose[1])
 
 
         // 方向調整例
@@ -902,8 +950,8 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
 
       this.frameMarker.object3D.position.copy(newObjPose[0]);
       this.frameMarker.object3D.quaternion.copy(newObjPose[1]);
-      console.log(`target x:${newObjPose[0].x} y:${newObjPose[0].y} z:${newObjPose[0].z} \n x:${newObjPose[1].x} y:${newObjPose[1].y} z:${newObjPose[1].z} w:${newObjPose[1].w}`)
-      console.log(`target ${newObjPose[1]}`)
+      // console.log(`target x:${newObjPose[0].x} y:${newObjPose[0].y} z:${newObjPose[0].z} \n x:${newObjPose[1].x} y:${newObjPose[1].y} z:${newObjPose[1].z} w:${newObjPose[1].w}`)
+      // console.log(`target ${newObjPose[1]}`)
 
       const m4 = new THREE.Matrix4();
       m4.compose(newObjPose[0], newObjPose[1], new THREE.Vector3(1, 1, 1));
