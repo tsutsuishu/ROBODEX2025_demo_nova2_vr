@@ -463,7 +463,7 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
     this.deadRadius = 0.2
     const deadzone = document.createElement('a-sphere');
     this.el.appendChild(deadzone);
-    this.deadzone = deadzone;
+    this.robotBubble = deadzone;
     deadzone.object3D.visible = false;
     deadzone.setAttribute('geometry', `radius:${this.deadRadius}`);
     deadzone.setAttribute('material', 'opacity: 0.25');
@@ -501,7 +501,7 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
       this.vrControllerEl = evt.detail?.originalTarget;
       this.triggerdownState = false;
       // 状態提示のsphere
-      this.deadzone.object3D.visible = false;
+      this.robotBubble.object3D.visible = false;
 
       const iso3 = workerPose(this.el);
       if (iso3) {
@@ -548,8 +548,8 @@ AFRAME.registerComponent('arm-displacement-motion-ui', {
       const deltaLength = vrControllerDelta[0].length()
       if (this.deadRadius > deltaLength) return
 
-      this.deadzone.object3D.visible = true;
-      this.deadzone.object3D.position.copy(this.startPose[0])
+      this.robotBubble.object3D.visible = true;
+      this.robotBubble.object3D.position.copy(this.startPose[0])
 
       // コントローラ座標系合わせ
       const filteredVrCtrlStartingPoseInv = [
@@ -646,18 +646,18 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
     startFrameMarker.object3D.position.copy(new THREE.Vector3(0, 1, 0));
 
     this.ControlMode = {
-      mimic:"mimic",
-      displacement:"displacement"
+      mimic: "mimic",
+      displacement: "displacement"
     }
     this.controlMode = this.ControlMode.mimic
     this.control
     // 変位制御追加分
     this.deadRadius = 0.2
-    this.deadzonePose = [new THREE.Vector3, new THREE.Quaternion]
+    this.robotBubbleCenterPose = [new THREE.Vector3, new THREE.Quaternion]
     // robotTipBubble
     const deadzone = document.createElement('a-sphere');
     this.el.appendChild(deadzone);
-    this.deadzone = deadzone;
+    this.robotBubble = deadzone;
     deadzone.object3D.visible = false;
     // deadzone.setAttribute('geometry', `radius:${this.deadRadius}`);
     deadzone.setAttribute('geometry', `radius:0.1`);
@@ -677,7 +677,6 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
     handDeadzone.addEventListener('loaded', () => {
       handDeadzone.getObject3D('mesh').material.depthWrite = false; //透過オブジェクト越しにgltfを見るために必要
     });
-    
 
     this.el.addEventListener('triggerdown', (evt) => {
       console.log('### trigger down event. laserVisible: ',
@@ -690,29 +689,28 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
         const iso3 = workerPose(this.el);
         if (iso3 && ctrlEl) {
           this.objStartingPose = iso3;
+          this.lastObjPose = this.objStartingPose
+          
           this.vrCtrlStartingPoseInv
             = isoMultiply(isoInvert([ctrlEl.object3D.position,
             ctrlEl.object3D.quaternion]),
               this.worldToBase);
-
-          // VRcontroller周りのバブルの基準用(triggerを押してからは離すまで更新なし．)
+          this.vrCtrlLastPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
+          this.vrCtrlLastFilteredPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
+          // VRcontroller周りのバブルの基準用(triggerを押してからは離すまで更新なし．可視化はせずに姿勢計算の閾値として利用)
           this.bubbleCenterPoseInv
             = isoMultiply(isoInvert([ctrlEl.object3D.position,
             ctrlEl.object3D.quaternion]),
               this.worldToBase);
-          
 
-          this.vrCtrlLastPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
-          this.vrCtrlLastFilteredPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
 
-          this.lastObjPose = this.objStartingPose
 
           //手先のバブルモデル用
-          this.deadzonePose = iso3
-          this.deadzone.object3D.position.copy(this.deadzonePose[0]) // displacement
-          this.deadzone.object3D.visible = true; //透明度変化，vibeとか？
+          this.robotBubbleCenterPose = iso3
+          this.robotBubble.object3D.position.copy(this.robotBubbleCenterPose[0]) // displacement
+          // this.robotBubble.object3D.visible = true; //透明度変化，vibeとか？
 
-          this.handDeadzone.object3D.position.copy(this.vrCtrlLastPose[0] ) // displacement
+          this.handDeadzone.object3D.position.copy(this.vrCtrlLastPose[0]) // displacement
 
           this.startFrameMarker.object3D.position.copy(this.vrCtrlLastPose[0])
           this.startFrameMarker.object3D.quaternion.copy(this.vrCtrlLastPose[1])
@@ -724,7 +722,7 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       this.vrControllerEl = evt.detail?.originalTarget;
       this.triggerdownState = false;
       // 状態提示のsphere
-      // this.deadzone.object3D.visible = false;
+      this.robotBubble.object3D.visible = false;
 
       const iso3 = workerPose(this.el);
       if (iso3) {
@@ -749,19 +747,22 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       const vrControllerPose = isoMultiply(this.baseToWorld,
         [ctrlEl.object3D.position,
         ctrlEl.object3D.quaternion]);
-  
+
       const vrCtrlStartToLast = isoMultiply(this.bubbleCenterPoseInv, vrControllerPose) //スケーリングしていないコントローラ差分(腕の可動域)でデッドゾーンは決める
       const deltaLength = vrCtrlStartToLast[0].length()
-      
+
       const newMode = this.deadRadius > deltaLength ? this.ControlMode.mimic : this.ControlMode.displacement;
       if (this.controlMode !== newMode) {
         this.controlMode = newMode;
         // 初期化
         this.objStartingPose = this.lastObjPose;
-        this.vrCtrlStartingPoseInv = isoMultiply(isoInvert([ctrlEl.object3D.position,ctrlEl.object3D.quaternion]), this.worldToBase); 
+        this.vrCtrlStartingPoseInv = isoMultiply(isoInvert([ctrlEl.object3D.position, ctrlEl.object3D.quaternion]), this.worldToBase);
         this.vrCtrlLastPose = vrControllerPose
         this.vrCtrlLastFilteredPose = vrControllerPose
         this.lastObjPose = this.objStartingPose
+
+        // this.robotBubble.object3D.visible  = (newMode == this.ControlMode.displacement)
+        this.robotBubble.object3D.visible = true
         return
       }
 
@@ -785,15 +786,41 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       vrCtrlDiffTickFiltered[0].multiplyScalar(0.5);
       vrCtrlDiffTickFiltered[1] = scaleQuaternion(vrCtrlDiffTickFiltered[1], 0.5)
       this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, vrCtrlDiffTickFiltered)
+      this.vrCtrlLastFilteredPose[1].normalize();
 
       let newObjPose = [new THREE.Vector3, new THREE.Quaternion]
       if (this.controlMode == "mimic") {
         // mimic操作
         // 手先姿勢座標系での差分表現
+        // const filteredVrCtrlStartingPoseInv = [
+        //   new THREE.Vector3(0, 0, 0),
+        //   vrCtrlStartToLast[1].clone().multiply(this.vrCtrlLastFilteredPose[1].clone().conjugate())
+        // ];
+        // const vrCtrlToObj = [
+        //   new THREE.Vector3(0, 0, 0),
+        //   filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
+        // ];
+        // const ObjToVrCtrl = [
+        //   new THREE.Vector3(0, 0, 0),
+        //   vrCtrlToObj[1].clone().conjugate()
+        // ];
+
+        // // GUI関連実装予定
+
+        // // 目標姿勢
+        // this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
+        //   isoMultiply(ObjToVrCtrl,
+        //     vrCtrlDiffTickFiltered)),
+        //   vrCtrlToObj);
+        // this.lastObjPose[1].normalize();
+        // newObjPose = this.lastObjPose
+
+
+        const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
         const filteredVrCtrlStartingPoseInv = [
           new THREE.Vector3(0, 0, 0),
-          vrCtrlStartToLast[1].clone().multiply(this.vrCtrlLastFilteredPose[1].clone().conjugate())
-        ];
+          vrControllerDelta[1].clone().multiply(vrControllerPose[1].clone().conjugate())
+        ]; //可変的な回転反映に対応したコントローラ座標系での開始位置を改めて，現在位置と差分から計算
         const vrCtrlToObj = [
           new THREE.Vector3(0, 0, 0),
           filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
@@ -802,24 +829,19 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
           new THREE.Vector3(0, 0, 0),
           vrCtrlToObj[1].clone().conjugate()
         ];
-
-        // GUI関連実装予定
-
-        // 目標姿勢
-        this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
+        newObjPose = isoMultiply(isoMultiply(this.objStartingPose,
           isoMultiply(ObjToVrCtrl,
-            vrCtrlDiffTickFiltered)),
+            vrControllerDelta)),
           vrCtrlToObj);
-        this.lastObjPose[1].normalize();
-        newObjPose = this.lastObjPose
+        this.lastObjPose = newObjPose //毎回保存しているけど，切り替えする直前のみ必要
 
-        // bubble表示位置
-        vrCtrlDiffTickFiltered[0] = new THREE.Vector3(0,0,0)
-        this.deadzonePose = isoMultiply(isoMultiply(this.deadzonePose,
+        // bubble表示姿勢(位置の更新はないけど，回転成分は更新する)．これも操作切り替え前の一発でOK
+        const robotBubbleDelta = [new THREE.Vector3(0, 0, 0), vrControllerDelta[1]]
+        this.robotBubbleCenterPose = isoMultiply(isoMultiply(this.objStartingPose,
           isoMultiply(ObjToVrCtrl,
-            vrCtrlDiffTickFiltered)),
+            robotBubbleDelta)),
           vrCtrlToObj);
-        this.deadzonePose[1].normalize();
+        // deltaを使ってstartからの姿勢計算を行うため，毎回計算をする必要がない．(累積部分はvrCtrlLastFilteredPoseで計算)
       } else {
         // displacement操作
         const filteredVrCtrlStartingPoseInv = [
@@ -847,19 +869,20 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
         this.lastObjPose[1].normalize();
         newObjPose = this.lastObjPose
 
-        this.deadzonePose = isoMultiply(isoMultiply(this.deadzonePose,
+        this.robotBubbleCenterPose = isoMultiply(isoMultiply(this.robotBubbleCenterPose,
           isoMultiply(ObjToVrCtrl,
             vrCtrlStartToLast)),
           vrCtrlToObj);
-        this.deadzonePose[1].normalize();
-        this.deadzone.object3D.position.copy(this.deadzonePose[0])
-        this.deadzone.object3D.quaternion.copy(this.deadzonePose[1])
-      
+        this.robotBubbleCenterPose[1].normalize();
+        this.robotBubble.object3D.position.copy(this.robotBubbleCenterPose[0])
+        // this.robotBubble.object3D.quaternion.copy(this.robotBubbleCenterPose[1])
 
+
+        // 方向調整例
         // let StartToLast = isoMultiply(this.vrCtrlStartingPoseInv, vrControllerPose) //スケーリングしていないコントローラ差分(腕の可動域)でデッドゾーンは決める
         // StartToLast[0].multiplyScalar(0.05);
         // StartToLast[1] = scaleQuaternion(StartToLast[1], 0.001)
-        
+
         // this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
         //   isoMultiply(ObjToVrCtrl,
         //     StartToLast)),
@@ -867,13 +890,13 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
         // this.lastObjPose[1].normalize();
         // newObjPose = this.lastObjPose
 
-        // this.deadzonePose = isoMultiply(isoMultiply(this.deadzonePose,
+        // this.robotBubbleCenterPose = isoMultiply(isoMultiply(this.robotBubbleCenterPose,
         //   isoMultiply(ObjToVrCtrl,
         //     StartToLast)),
         //   vrCtrlToObj);
-        // this.deadzonePose[1].normalize();
-        // this.deadzone.object3D.position.copy(this.deadzonePose[0])
-        // this.deadzone.object3D.quaternion.copy(this.deadzonePose[1])
+        // this.robotBubbleCenterPose[1].normalize();
+        // this.robotBubble.object3D.position.copy(this.robotBubbleCenterPose[0])
+        // this.robotBubble.object3D.quaternion.copy(this.robotBubbleCenterPose[1])
 
       }
 
