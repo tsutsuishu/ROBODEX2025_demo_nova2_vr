@@ -16,7 +16,7 @@ import '../compo_aframe/gripControl.js';
 import '../compo_aframe/default_event_target.js';
 import '../compo_aframe/motionFilter.js'
 import '../compo_aframe/model_opacity.js'
-
+import '../compo_aframe/robotPoseAdjuster.js'
 import { getCookie } from '../lib/cookie_id.js';
 import { setupMQTT } from '../lib/MQTT_jobs.js';
 
@@ -25,13 +25,17 @@ import StereoVideo from '../components/stereoWebRTC.js';
 
 
 // 角度、横方向のオフセットを Cookie から取得して初期化
-const getCookiesForInitalize = (appmode, setVrModeAngle, setVrModeOffsetX) => {
+const getCookiesForInitalize = (appmode, setVrModeAngle, setVrModeOffsetX, setVrModeOffsetY, setVrModeOffsetZ) => {
   // Cookie, Offsetの取得
   if (!(appmode === AppMode.viewer)) {
     const wk_vrModeAngle = getCookie('vrModeAngle')
     setVrModeAngle(wk_vrModeAngle ? parseFloat(wk_vrModeAngle) : 180);  // change default to 90
-    const wk_vrModeOffsetX = getCookie('vrModeOffsetX')
+    const wk_vrModeOffsetX = getCookie('vrModeOffsetX');
     setVrModeOffsetX(wk_vrModeOffsetX ? parseFloat(wk_vrModeOffsetX) : 0.55); // デフォルト X 方向オフセット
+    const wk_vrModeOffsetY = getCookie('vrModeOffsetY');
+    setVrModeOffsetY(wk_vrModeOffsetY ? parseFloat(wk_vrModeOffsetY) : 0.75);
+    const wk_vrModeOffsetZ = getCookie('vrModeOffsetZ');
+    setVrModeOffsetZ(wk_vrModeOffsetZ ? parseFloat(wk_vrModeOffsetZ) : -0.8);
     // console.log("Cookie read vrModeAngle, OffsetX:", vrModeAngle_ref.current, vrModeOffsetX_ref.current);
   }
 }
@@ -42,6 +46,8 @@ export default function Home(props) {
 
   const [vrModeAngle, setVrModeAngle] = React.useState(90);       // ロボット回転角度
   const [vrModeOffsetX, setVrModeOffsetX] = React.useState(0.35);   // X offset
+  const [vrModeOffsetY, setVrModeOffsetY] = React.useState(0.75);
+  const [vrModeOffsetZ, setVrModeOffsetZ] = React.useState(-0.8);
   const [base_rotation, setBaseRotation] = React.useState(`-90 90 0`);     // ベース角度
   const [base_position, setBasePosition] = React.useState(`0.35 0.75 -0.8`);   // ベース位置
 
@@ -76,16 +82,16 @@ export default function Home(props) {
 
   // Cookie から初期値取得
   React.useEffect(() => {
-    getCookiesForInitalize(props.appmode, setVrModeAngle, setVrModeOffsetX);
+    getCookiesForInitalize(props.appmode, setVrModeAngle, setVrModeOffsetX, setVrModeOffsetY, setVrModeOffsetZ);
   }, []);
   // base_position, base_rotation 更新
   React.useEffect(() => {
     // setBasePosition(`${vrModeOffsetX} 0.75 -0.8`);
     // setBaseRotation(`-90 ${vrModeAngle} 0`);
-    setBasePosition(`${vrModeOffsetX-0.175} 0.975 -0.52`);
+    setBasePosition(`${vrModeOffsetX} ${vrModeOffsetY} ${vrModeOffsetZ}`);
     setBaseRotation(`-90 ${vrModeAngle} 0`);
     console.log("Home base_pos, rotation:", base_position, base_rotation);
-  }, [vrModeAngle, vrModeOffsetX]);
+  }, [vrModeAngle, vrModeOffsetX, vrModeOffsetY, vrModeOffsetZ]);
   
   
   React.useEffect(() => {
@@ -129,7 +135,21 @@ export default function Home(props) {
               grip-control
               default-event-target
               motion-dynamic-filter={`enabled: ${props.appmode === AppMode.filter}`}
-            /> : 
+            /> : (props.appmode === AppMode.adjust) ?
+            <a-plane id="nova2-plane"
+              ref={nova2_ref}
+              position={base_position} rotation={base_rotation}
+
+              width="0.5" height="0.5" color="#7BC8A4"
+              material="opacity: 0.3; transparent: true; side: double;"
+              robot-loader="model: nova2_robot"
+              ik-worker={initial_pose}
+              reflect-worker-joints={`appmode: ${props.appmode}`}
+              default-event-target
+
+              robot-pose-adjuster
+              
+            /> :
             <a-plane id="nova2-plane"
               ref={nova2_ref}
               position={base_position} rotation={base_rotation}
@@ -144,9 +164,8 @@ export default function Home(props) {
               default-event-target
               motion-dynamic-filter={`enabled: ${props.appmode === AppMode.filter}`}
               swing-check
-            />   
+            />
           }
-          <a-text id = "debug" value = "null" scale = "0.5 0.5 0.5" position="0 0.5 -1" visible="false"></a-text>
 
           {/* <a-sky color="#ECECEC"></a-sky> 
                    ik-worker={`${deg90}, ${-deg90}, ${deg90}, 0, ${-deg90}, 0`}

@@ -11,7 +11,8 @@ export const AppMode = {
   practice: 'practice',    // 練習モード (荷物を運ぶタイプ：VRのみ)
   monitor: 'monitor',    // 監視モード (ロボットの状態を監視する)
   filter: 'filter',    // 
-  develop: 'develop'    //実験機能 + カメラ
+  develop: 'develop',    //実験機能 + カメラ
+  adjust: 'adjust'      //カメラ＋アーム姿勢の位置合わせ用
 };
 
 
@@ -20,14 +21,16 @@ export function isControlMode(appmode) {
           appmode === AppMode.withCam ||
           appmode === AppMode.withDualCam ||
           appmode === AppMode.filter ||
-          appmode === AppMode.develop);
+          appmode === AppMode.develop ||
+          appmode === AppMode.adjust);
 }
 
 export function isCameraMode(appmode) {
   return (
           appmode === AppMode.withCam ||
           appmode === AppMode.withDualCam ||
-          appmode === AppMode.develop);
+          appmode === AppMode.develop ||
+          appmode === AppMode.adjust);
 }
 
 export function isNonControlMode(appmode) {

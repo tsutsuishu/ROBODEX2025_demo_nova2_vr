@@ -274,11 +274,6 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
     }
   }
 });
-<<<<<<< HEAD
-// arm-motion-uiのオプション的に動作(二つのcomponentを入れる)
-=======
-
->>>>>>> develop
 AFRAME.registerComponent('arm-motion-inertia', {
   schema:
     { type: 'string', default: "0 0 0:0 0 0" }
