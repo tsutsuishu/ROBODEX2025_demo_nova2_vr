@@ -25,8 +25,9 @@ export default function StereoVideo(props) {
     const [objectRender, setObjectRender] = React.useState(false)
     const [stereo_visible, set_stereo_visible] = React.useState(false)
     
-    const set_RealSense = (appmode === AppMode.withDualCam || appmode === AppMode.monitor); //realsenseを使う場合はtrueにする
+    // const set_RealSense = (appmode === AppMode.withDualCam || appmode === AppMode.monitor); //realsenseを使う場合はtrueにする
     // const set_RealSense = (appmode === AppMode.withCam)
+    const set_RealSense = false
 
 
     // statsReport 定期的に更新
@@ -64,8 +65,8 @@ export default function StereoVideo(props) {
         if (sora_once && objectRender) {
             console.log("Using sora-js-sdk version:", Sora.version());
             // const signalingUrl = 'wss://sora.uclab.jp/signaling'; //demo用
-            // const signalingUrl = 'wss://sora2.uclab.jp/signaling'; // 202508 demo用
-            const signalingUrl = 'wss://sora3.uclab.jp/signaling'; // 202508 demo用
+            const signalingUrl = 'wss://sora2.uclab.jp/signaling'; // 202508 demo用
+            // const signalingUrl = 'wss://sora3.uclab.jp/signaling'; // 202508 demo用
             const channelId = 'nova2-vr180';
             const channelId1 = 'nova2-hand';
             const audioChannelId = 'nova2-audio'; // 202508 のdemo では、使わない予定

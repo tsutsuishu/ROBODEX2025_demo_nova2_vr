@@ -106,7 +106,7 @@ export default function Home(props) {
           <a-camera id="camera" stereocam></a-camera>          
 
           {  // ステレオカメラ使うか extra-camera={props.appmode}>
-            (props.appmode === AppMode.withCam || props.appmode === AppMode.withDualCam || props.appmode === AppMode.monitor) ?
+            (props.appmode === AppMode.withCam || props.appmode === AppMode.withDualCam || props.appmode === AppMode.monitor || props.appmode === AppMode.develop) ?
               <StereoVideo rendered={draw_ready} set_rtcStats={set_rtcStats} 
                 appmode={props.appmode}
               /> : <></>
