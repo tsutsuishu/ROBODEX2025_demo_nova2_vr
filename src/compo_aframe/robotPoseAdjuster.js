@@ -1,59 +1,54 @@
 import { setCookie } from '../lib/cookie_id.js';
+const THREE = window.AFRAME.THREE;
 
-/**
- * robot-pose-adjuster
- *
- * schema: "x y z:rx ry rz"  (base_position + ":" + base_rotation)
- *
- * VRコントローラーで以下を操作:
- *   スティック左右 → ロボットX位置
- *   スティック上下 → ロボットZ位置
- *   トリガー押し   → ロボットY位置 上昇
- *   グリップ押し   → ロボットY位置 下降
- *   Aボタン        → 現在のposition / rotationをCookieに保存
- *
- * ※ event-distributor が転送するイベントのみ使用:
- *   triggerdown/up, gripdown/up, abuttondown/up, bbuttondown/up,
- *   thumbstickmoved, thumbstickdown/up
- */
 AFRAME.registerComponent('robot-pose-adjuster', {
   schema: { type: 'string', default: '0 0 0:0 0 0' },
 
   init: function () {
-    // --- 入力状態 (down/upでフラグ管理) ---
-    this.triggerPressed = false;
-    this.gripPressed    = false;
-    this.stickX         = 0;
-    this.stickY         = 0;
+    this.triggerValue = 0;
+    this.gripperValue = 0;
+    this.stickPressed = false;
+    this.stickX = 0;
+    this.stickY = 0;
+    this.changed = false;
 
-    // --- schemaから初期値をパース ---
+    this.position = new THREE.Vector3();
+    this.quaternion = new THREE.Quaternion();
     this._parseSchema(this.data);
 
-    // --- トリガー ---
-    this.el.addEventListener('triggerdown', () => { this.triggerPressed = true;  });
-    this.el.addEventListener('triggerup',   () => { this.triggerPressed = false; });
+    const cookieText = document.createElement('a-entity');
+    this.el.appendChild(cookieText);
+    this.cookieText = cookieText;
+    cookieText.object3D.visible = false;
+    const textBack = document.createElement('a-plane');
+    textBack.setAttribute('width', 0.8);
+    textBack.setAttribute('height', 0.3);
+    cookieText.appendChild(textBack);
 
-    // --- グリップ ---
-    this.el.addEventListener('gripdown', () => { this.gripPressed = true;});
-    this.el.addEventListener('gripup',   () => { this.gripPressed = false; });
+    this.el.addEventListener('triggerchanged', (e) => { this.triggerValue = e.detail.value; });
 
-    // --- Aボタン: Cookie保存 ---
-    this.el.addEventListener('abuttondown', () => {
-      this._saveToCookie();
-    });
+    this.el.addEventListener('gripchanged', (e) => { this.gripperValue = e.detail.value; });
 
-    this.el.addEventListener('bbuttondown', () => {
-      this._clearCookie();
-    });
+    this.el.addEventListener('abuttondown', () => { this._saveToCookie(); });
+    this.el.addEventListener('bbuttondown', () => { this._clearCookie(); });
 
-    // --- スティック ---
     this.el.addEventListener('thumbstickmoved', (evt) => {
-      this.stickX = evt.detail.x; // -1.0〜1.0
-      this.stickY = evt.detail.y; // -1.0〜1.0
+      this.stickX = evt.detail.x;
+      this.stickY = evt.detail.y;
+    });
+    this.el.addEventListener('thumbstickdown', () => {
+      this.stickPressed = true;
+      const delta = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 0, 1),
+        THREE.MathUtils.degToRad(90)
+      );
+      this.quaternion.multiply(delta);
+      this.changed = true;
     });
     this.el.addEventListener('thumbstickup', () => {
       this.stickX = 0;
       this.stickY = 0;
+      this.stickPressed = false;
     });
   },
 
@@ -65,69 +60,96 @@ AFRAME.registerComponent('robot-pose-adjuster', {
 
   tick: function (time, deltaTime) {
     if (!this.el?.shouldListenEvents) return;
-    
 
-    const dt         = deltaTime / 1000 / 1000; // msec → sec
-    const MOVE_SPEED = 0.3;  // m/s
-    const STICK_DEAD = 0.15; // デッドゾーン
+    const dt = deltaTime / 1000;
+    const MOVE_SPEED = 0.1;
+    const STICK_DEAD = 0.10;
 
-    let changed = false;
-
-    // --- X / Z : スティック ---
     if (Math.abs(this.stickX) > STICK_DEAD) {
-      this.posX += this.stickX * MOVE_SPEED * dt;
-      changed = true;
+      this.position.x += this.stickX * MOVE_SPEED * dt;
+      this.changed = true;
     }
     if (Math.abs(this.stickY) > STICK_DEAD) {
-      this.posZ += this.stichsckY * MOVE_SPEED * dt;
-      changed = true;
+      this.position.z += this.stickY * MOVE_SPEED * dt;
+      this.changed = true;
     }
 
-    // --- Y : トリガー(上) / グリップ(下) ---
-    if (this.triggerPressed) {
-      this.posY += MOVE_SPEED * dt;
-      changed = true;
+    if (this.triggerValue > 0) {
+      this.position.y += this.triggerValue * MOVE_SPEED * dt;
+      this.changed = true;
     }
-    if (this.gripPressed) {
-      this.posY -= MOVE_SPEED * dt;
-      changed = true;
+    if (this.gripperValue > 0) {
+      this.position.y -= this.gripperValue * MOVE_SPEED * dt;
+      this.changed = true;
     }
 
-    // --- entityに反映 ---
-    if (changed) {
-      this.el.setAttribute('position', { x: this.posX, y: this.posY, z: this.posZ });
-      this.el.setAttribute('rotation', { x: this.rotX, y: this.rotY, z: this.rotZ });
-      console.log(`[pose-adjuster] pos: ${this.posX.toFixed(3)} ${this.posY.toFixed(3)} ${this.posZ.toFixed(3)}`);
+    if (this.changed) {
+      this.changed = false;
+      this.el.setAttribute('position', { x: this.position.x, y: this.position.y, z: this.position.z });
+      const euler = new THREE.Euler().setFromQuaternion(this.quaternion, 'YXZ');
+      this.el.setAttribute('rotation', {
+        x: THREE.MathUtils.radToDeg(euler.x),
+        y: THREE.MathUtils.radToDeg(euler.y),
+        z: THREE.MathUtils.radToDeg(euler.z),
+      });
     }
   },
-
-  // ---- private ----
 
   _parseSchema: function (data) {
     const parts = data.split(':');
-    const pos   = (parts[0] || '0 0 0').trim().split(/\s+/).map(Number);
-    const rot   = (parts[1] || '0 0 0').trim().split(/\s+/).map(Number);
+    const p = (parts[0] || '0 0 0').trim().split(/\s+/).map(Number);
+    const r = (parts[1] || '0 0 0').trim().split(/\s+/).map(Number);
 
-    this.posX = pos[0] ?? 0;
-    this.posY = pos[1] ?? 0;
-    this.posZ = pos[2] ?? 0;
-    this.rotX = rot[0] ?? 0;
-    this.rotY = rot[1] ?? 0; // vrModeAngle に対応
-    this.rotZ = rot[2] ?? 0;
+    this.position.set(p[0] ?? 0, p[1] ?? 0, p[2] ?? 0);
+    const euler = new THREE.Euler(
+      THREE.MathUtils.degToRad(r[0] ?? 0),
+      THREE.MathUtils.degToRad(r[1] ?? 0),
+      THREE.MathUtils.degToRad(r[2] ?? 0),
+      'YXZ'
+    );
+    this.quaternion.setFromEuler(euler);
+  },
+
+  _showMessage: function (msg, durationMs = 3000) {
+    if (this._msgTimer) clearTimeout(this._msgTimer);
+    this.cookieText.setAttribute('text', {
+      value: msg,
+      align: 'center',
+      width: 1.5,
+      color: 'black',
+    });
+    const parentRotInv = this.quaternion.clone().conjugate();
+    const worldRot = new THREE.Quaternion(); // identity = 正面向き
+    const textRot = parentRotInv.multiply(worldRot);
+
+    // オフセット位置も親回転の影響を除去
+    const offsetInWorld = new THREE.Vector3(0, 0.2, 0.2);
+    const localOffset = offsetInWorld.clone().applyQuaternion(parentRotInv);
+
+    this.cookieText.object3D.position.copy(localOffset);
+    this.cookieText.object3D.quaternion.copy(textRot);
+
+    this.cookieText.object3D.visible = true;
+    this._msgTimer = setTimeout(() => {
+      this.cookieText.object3D.visible = false;
+    }, durationMs);
   },
 
   _saveToCookie: function () {
-    console.log(`[robot-pose-adjuster] Save: pos=${this.posX.toFixed(4)} ${this.posY.toFixed(4)} ${this.posZ.toFixed(4)} angle=${this.rotY.toFixed(2)}`);
-    setCookie('vrModeOffsetX', String(this.posX));
-    setCookie('vrModeOffsetY', String(this.posY));
-    setCookie('vrModeOffsetZ', String(this.posZ));
-    setCookie('vrModeAngle',   String(this.rotY));
+    const euler = new THREE.Euler().setFromQuaternion(this.quaternion, 'YXZ');
+    const rotY = THREE.MathUtils.radToDeg(euler.y);
+    console.log(`[robot-pose-adjuster] Save: pos=${this.position.x.toFixed(4)} ${this.position.y.toFixed(4)} ${this.position.z.toFixed(4)} angle=${rotY.toFixed(2)}`);
+    setCookie('vrModeOffsetX', String(this.position.x));
+    setCookie('vrModeOffsetY', String(this.position.y));
+    setCookie('vrModeOffsetZ', String(this.position.z));
+    setCookie('vrModeAngle', String(rotY));
+    this._showMessage(`Saved!\nX:${this.position.x.toFixed(3)} Y:${this.position.y.toFixed(3)} Z:${this.position.z.toFixed(3)}\nAngle:${rotY.toFixed(1)}`);
   },
   _clearCookie: function () {
-    console.log(`[robot-pose-adjuster] Save: pos=${this.posX.toFixed(4)} ${this.posY.toFixed(4)} ${this.posZ.toFixed(4)} angle=${this.rotY.toFixed(2)}`);
-    setCookie('vrModeOffsetX', "0.55");
-    setCookie('vrModeOffsetY', "0.75");
-    setCookie('vrModeOffsetZ', "-0.8");
-    setCookie('vrModeAngle',   "180");
+    setCookie('vrModeOffsetX', '0.35');
+    setCookie('vrModeOffsetY', '0.75');
+    setCookie('vrModeOffsetZ', '-0.9');
+    setCookie('vrModeAngle', '180');
+    this._showMessage('Reset to default!');
   },
 });

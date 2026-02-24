@@ -72,7 +72,7 @@ AFRAME.registerComponent('event-distributor', {
       return;
     }
     ['thumbmenu-select',
-      'triggerdown', 'triggerup', 'gripdown', 'gripup',
+      'triggerdown', 'triggerup', 'triggerchanged', 'gripdown', 'gripup', 'gripchanged',
       'abuttondown', 'abuttonup', 'bbuttondown', 'bbuttonup',
       'thumbstickmoved', 'thumbstickdown', 'thumbstickup',
     ].forEach(evtName => {

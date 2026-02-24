@@ -139,7 +139,7 @@ export default function DynamicHome() {
               value={vrModeAngle === "" ? "" : String(vrModeAngle)}
               onChange={(e) => handleFloat(setVrModeAngle, e.target.value)}
               className="w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring"
-              placeholder="例: 45.0"
+              placeholder="例: 180.0"
             />
           </div>
 
@@ -157,7 +157,7 @@ export default function DynamicHome() {
               value={vrModeOffsetX === "" ? "" : String(vrModeOffsetX)}
               onChange={(e) => handleFloat(setVrModeOffsetX, e.target.value)}
               className="w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring"
-              placeholder="例: 0.25"
+              placeholder="例: 0.35"
             />
           </div>
 
@@ -193,7 +193,7 @@ export default function DynamicHome() {
               value={vrModeOffsetZ === "" ? "" : String(vrModeOffsetZ)}
               onChange={(e) => handleFloat(setVrModeOffsetZ, e.target.value)}
               className="w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring"
-              placeholder="例: -0.8"
+              placeholder="例: -0.9"
             />
           </div>
         </div>

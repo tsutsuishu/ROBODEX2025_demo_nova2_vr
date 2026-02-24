@@ -29,13 +29,13 @@ const getCookiesForInitalize = (appmode, setVrModeAngle, setVrModeOffsetX, setVr
   // Cookie, Offsetの取得
   if (!(appmode === AppMode.viewer)) {
     const wk_vrModeAngle = getCookie('vrModeAngle')
-    setVrModeAngle(wk_vrModeAngle ? parseFloat(wk_vrModeAngle) : 180);  // change default to 90
+    setVrModeAngle(wk_vrModeAngle ? parseFloat(wk_vrModeAngle) : 180);
     const wk_vrModeOffsetX = getCookie('vrModeOffsetX');
-    setVrModeOffsetX(wk_vrModeOffsetX ? parseFloat(wk_vrModeOffsetX) : 0.55); // デフォルト X 方向オフセット
+    setVrModeOffsetX(wk_vrModeOffsetX ? parseFloat(wk_vrModeOffsetX) : 0.35);
     const wk_vrModeOffsetY = getCookie('vrModeOffsetY');
     setVrModeOffsetY(wk_vrModeOffsetY ? parseFloat(wk_vrModeOffsetY) : 0.75);
     const wk_vrModeOffsetZ = getCookie('vrModeOffsetZ');
-    setVrModeOffsetZ(wk_vrModeOffsetZ ? parseFloat(wk_vrModeOffsetZ) : -0.8);
+    setVrModeOffsetZ(wk_vrModeOffsetZ ? parseFloat(wk_vrModeOffsetZ) : -0.9);
     // console.log("Cookie read vrModeAngle, OffsetX:", vrModeAngle_ref.current, vrModeOffsetX_ref.current);
   }
 }
@@ -44,12 +44,12 @@ const getCookiesForInitalize = (appmode, setVrModeAngle, setVrModeOffsetX, setVr
 export default function Home(props) {
   const robotIDRef = React.useRef("robot_id_reference"); // ロボットUUID 保持用
 
-  const [vrModeAngle, setVrModeAngle] = React.useState(90);       // ロボット回転角度
+  const [vrModeAngle, setVrModeAngle] = React.useState(180);       // ロボット回転角度
   const [vrModeOffsetX, setVrModeOffsetX] = React.useState(0.35);   // X offset
   const [vrModeOffsetY, setVrModeOffsetY] = React.useState(0.75);
-  const [vrModeOffsetZ, setVrModeOffsetZ] = React.useState(-0.8);
+  const [vrModeOffsetZ, setVrModeOffsetZ] = React.useState(-0.9);
   const [base_rotation, setBaseRotation] = React.useState(`-90 90 0`);     // ベース角度
-  const [base_position, setBasePosition] = React.useState(`0.35 0.75 -0.8`);   // ベース位置
+  const [base_position, setBasePosition] = React.useState(`0.35 0.75 -0.9`);   // ベース位置
 
   const [draw_ready, set_draw_ready] = React.useState(false)
 
@@ -86,8 +86,6 @@ export default function Home(props) {
   }, []);
   // base_position, base_rotation 更新
   React.useEffect(() => {
-    // setBasePosition(`${vrModeOffsetX} 0.75 -0.8`);
-    // setBaseRotation(`-90 ${vrModeAngle} 0`);
     setBasePosition(`${vrModeOffsetX} ${vrModeOffsetY} ${vrModeOffsetZ}`);
     setBaseRotation(`-90 ${vrModeAngle} 0`);
     console.log("Home base_pos, rotation:", base_position, base_rotation);
@@ -114,7 +112,7 @@ export default function Home(props) {
           <a-camera id="camera" stereocam></a-camera>          
 
           {  // ステレオカメラ使うか extra-camera={props.appmode}>
-            (props.appmode === AppMode.withCam || props.appmode === AppMode.withDualCam || props.appmode === AppMode.monitor) ?
+            (props.appmode === AppMode.withCam || props.appmode === AppMode.withDualCam || props.appmode === AppMode.monitor || props.appmode === AppMode.develop || props.appmode === AppMode.adjust) ?
               <StereoVideo rendered={draw_ready} set_rtcStats={set_rtcStats} 
                 appmode={props.appmode}
               /> : <></>
@@ -147,7 +145,7 @@ export default function Home(props) {
               reflect-worker-joints={`appmode: ${props.appmode}`}
               default-event-target
 
-              robot-pose-adjuster
+              robot-pose-adjuster={base_position+":"+base_rotation}  
               
             /> :
             <a-plane id="nova2-plane"

@@ -63,8 +63,8 @@ export default function StereoVideo(props) {
         if (sora_once && objectRender) {
             console.log("Using sora-js-sdk version:", Sora.version());
             // const signalingUrl = 'wss://sora.uclab.jp/signaling'; //demo用
-            // const signalingUrl = 'wss://sora2.uclab.jp/signaling'; // 202508 demo用
-            const signalingUrl = 'wss://sora3.uclab.jp/signaling'; // 202508 demo用
+            const signalingUrl = 'wss://sora2.uclab.jp/signaling'; // 202508 demo用
+            // const signalingUrl = 'wss://sora3.uclab.jp/signaling'; // 202508 demo用
             const channelId = 'nova2-vr180';
             const channelId1 = 'nova2-hand';
             const audioChannelId = 'nova2-audio'; // 202508 のdemo では、使わない予定
