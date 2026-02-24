@@ -24,10 +24,8 @@ export default function StereoVideo(props) {
     const { rendered, set_rtcStats, appmode } = props
     const [objectRender, setObjectRender] = React.useState(false)
     const [stereo_visible, set_stereo_visible] = React.useState(false)
-    
-    // const set_RealSense = (appmode === AppMode.withDualCam || appmode === AppMode.monitor); //realsenseを使う場合はtrueにする
-    // const set_RealSense = (appmode === AppMode.withCam)
-    const set_RealSense = false
+
+    const set_RealSense = (appmode === AppMode.withDualCam || appmode === AppMode.monitor); //realsenseを使う場合はtrueにする
 
 
     // statsReport 定期的に更新
@@ -159,8 +157,8 @@ export default function StereoVideo(props) {
                         const rightSphere = document.getElementById('rightSphere');
 
                         if (leftSphere && rightSphere) {
-//                            leftSphere.setAttribute('material', { src: '#remotevideo' });
-//                            rightSphere.setAttribute('material', { src: '#remotevideo' });
+                            //                            leftSphere.setAttribute('material', { src: '#remotevideo' });
+                            //                            rightSphere.setAttribute('material', { src: '#remotevideo' });
 
                             remoteVideo.play();
 
@@ -339,7 +337,7 @@ export default function StereoVideo(props) {
             console.log("Add Stereo Assets", rendered)
             //assetの追加
             const assets = document.createElement('a-assets');
-            assets.setAttribute('id','videoAssets')
+            assets.setAttribute('id', 'videoAssets')
 
             const remoteVideo = document.createElement('video');
             remoteVideo.setAttribute('id', 'remotevideo');
@@ -372,19 +370,19 @@ export default function StereoVideo(props) {
             //objectの追加
             const leftSphere = document.createElement('a-entity');
             leftSphere.setAttribute('id', 'leftSphere');
-            leftSphere.setAttribute('scale', '-1 1 1');
+            leftSphere.setAttribute('scale', '1 1 1');
             leftSphere.setAttribute('position', '0 1.7 0');
             leftSphere.setAttribute('geometry', 'primitive:sphere; radius:100; segmentsWidth: 60; segmentsHeight:40; thetaLength:180'); //r=100
-            leftSphere.setAttribute('material', 'shader:flat; src:#remotevideo; side:back');
+            leftSphere.setAttribute('material', 'shader:fisheye-stereo; src:#remotevideo; side:back; fov:160; radius:0.55; cx:0.50; cy:0.50');
             //leftSphere.setAttribute('material', 'shader:flat; src:#stereo-left; side:back');
             leftSphere.setAttribute('stereo', 'eye:left; mode: half;');
 
             const rightSphere = document.createElement('a-entity');
             rightSphere.setAttribute('id', 'rightSphere');
-            rightSphere.setAttribute('scale', '-1 1 1');
+            rightSphere.setAttribute('scale', '1 1 1');
             rightSphere.setAttribute('position', '0 1.7 0');
             rightSphere.setAttribute('geometry', 'primitive:sphere; radius:100; segmentsWidth: 60; segmentsHeight:40; thetaLength:180'); //r=100
-            rightSphere.setAttribute('material', 'shader:flat; src:#remotevideo; side:back');
+            rightSphere.setAttribute('material', 'shader:fisheye-stereo; src:#remotevideo; side:back; fov:160; radius:0.55; cx:0.50; cy:0.50');
             //rightSphere.setAttribute('material', 'shader:flat; src:#stereo-right; side:back');
             rightSphere.setAttribute('stereo', 'eye:right; mode: half;');
             rightSphere.setAttribute('visible', true);
@@ -393,16 +391,14 @@ export default function StereoVideo(props) {
             if (set_RealSense) {
                 const videoPlane = document.createElement('a-plane');
                 videoPlane.setAttribute('id', 'videoPlate');
-                // videoPlane.setAttribute('position', '-0.25 .1 -0.8');
-                videoPlane.setAttribute('position', '0.25 1.25 -0.75');
-                // videoPlane.setAttribute('scale', '0.25 0.25 1');
-                videoPlane.setAttribute('scale', '0.5 0.5 1');
+                videoPlane.setAttribute('position', '-0.25 .1 -0.8');
+                videoPlane.setAttribute('scale', '0.25 0.25 1');
                 videoPlane.setAttribute('width', '1.6');
                 videoPlane.setAttribute('height', '1.2');
                 videoPlane.setAttribute('material', 'src: #remotevideo-realsense;');
                 videoPlane.setAttribute('current-ui', '');
                 videoPlane.setAttribute('visible', true); //ワイプの手先カメラ表示
-                scene.appendChild(videoPlane);
+                UIBack.appendChild(videoPlane);
             }
 
             // 新しい <a-entity> を <a-scene> に追加
@@ -416,10 +412,10 @@ export default function StereoVideo(props) {
 
     React.useEffect(() => {
         if (rendered) {
-//            console.log("Set Stereo video assets to scene!")
-//            const assets = document.querySelector('#videoAssets');
-//            const scene = document.querySelector('a-scene');
-//            scene.appendChild(assets);
+            //            console.log("Set Stereo video assets to scene!")
+            //            const assets = document.querySelector('#videoAssets');
+            //            const scene = document.querySelector('a-scene');
+            //            scene.appendChild(assets);
 
             const leftSphere = document.querySelector('#leftSphere');
             const rightSphere = document.querySelector('#rightSphere');
@@ -454,132 +450,79 @@ if (!('stereo' in AFRAME.components)) {
             this.video_click_event_added = false;
             this.material_is_a_video = true;
 
-            if (this.el.getAttribute('material') !== null && 'src' in this.el.getAttribute('material') && this.el.getAttribute('material').src !== '') {
+            if (this.el.getAttribute('material') !== null &&
+                'src' in this.el.getAttribute('material') &&
+                this.el.getAttribute('material').src !== '') {
                 const src = this.el.getAttribute('material').src;
-
                 if (typeof src === 'object' && ('tagName' in src && src.tagName === 'VIDEO')) {
                     this.material_is_a_video = true;
                 }
             }
 
-            const object3D = this.el.object3D.children[0];
-            const validGeometries = [THREE.SphereGeometry, THREE.SphereBufferGeometry, THREE.BufferGeometry];
-            const isValidGeometry = validGeometries.some(geometry => object3D.geometry instanceof geometry);
+            const applyGeometryAndUV = () => {
+                const object3D = this.el.getObject3D('mesh');
+                if (!object3D || !object3D.geometry) return false;
 
+                const validGeometries = [THREE.SphereGeometry, THREE.SphereBufferGeometry, THREE.BufferGeometry];
+                const isValidGeometry = validGeometries.some(geometry => object3D.geometry instanceof geometry);
+                if (!isValidGeometry || !this.material_is_a_video) return false;
 
-            function uEdgeMapParam(u_local, sharp = 0.9) {
-                const t = 2.0 * u_local - 1.0;          // 中央0, 左端-1, 右端+1
-                const s = Math.sign(t) * Math.pow(Math.abs(t), sharp);
-                return 0.5 * (s + 1.0);                 // [0,1] に戻す
-            }
-
-
-            function applyUVmap(geometry, eye /* 'left'|'right' */, opts = {}) {
-                const uv = geometry.attributes.uv;
-
-                const uKEdge = opts.uKEdge ?? 0.35;   // 上下端での最大ブレンド
-                const uKCenter = opts.uKCenter ?? 0.10;   // 中央での最小ブレンド
-                const uSharp = opts.uSharp ?? 0.9;    // 拡張カーブの鋭さ
-                const vToUWeightPower = opts.vToUWeightPower ?? 2;
-
-                const uOffset = (eye === 'left') ? 0.0 : 0.5;
-                const uScale = 0.5;
-
-                const vCropTop = opts.vCropTop ?? 0.0;
-                const vCropBottom = opts.vCropBottom ?? 0.0;
-                const vRange = 1.0 - vCropTop - vCropBottom;
-
-                const PADDING_U = 0.07; // 左右10%
-                const PADDING_V = 0.06; // 上下10%
-
-                for (let i = 0; i < uv.count; i++) {
-                    const u0 = uv.getX(i);
-                    const v0 = uv.getY(i);
-
-                    //const u_lin = u0 * uScale + uOffset;
-                    //const v_lin = v0 * vRange + vCropBottom;
-                    const u_lin = u0 * uScale + uOffset;
-                    const u_local = (u_lin - uOffset) / uScale;
-
-                    const v_lin = v0 * vRange + vCropBottom;     // [0,1]
-                    const v_local = v_lin;
-
-                    const invURange = 1.0 / Math.max(1e-6, (1.0 - 2.0 * PADDING_U));
-                    const invVRange = 1.0 / Math.max(1e-6, (1.0 - 2.0 * PADDING_V));
-
-                    let u_eff = 0.5 + (u_local - 0.5) * invURange;
-                    let v_eff = 0.5 + (v_local - 0.5) * invVRange;
-
-                    // 0..1 にクリップ（歪み関数の定義域を守る）
-                    u_eff = Math.min(1.0, Math.max(0.0, u_eff));
-                    v_eff = Math.min(1.0, Math.max(0.0, v_eff));
-
-                    const v_adj = v_eff;
-
-                    const dVEdge = Math.abs(v_eff - 0.5) / 0.5;                 // 中央0, 上下端1
-                    const wEdgeV = Math.pow(dVEdge, vToUWeightPower ?? 2.0);
-                    const uK_eff = uKCenter + (uKEdge - uKCenter) * wEdgeV;     // Vに依存する実効強度
-
-                    const u_edge = uEdgeMapParam(u_eff, uSharp);                // U端方向へ寄せる写像
-                    const u_mix = (1.0 - uK_eff) * u_eff + uK_eff * u_edge;    // 補正混合
-
-                    const u_adj = u_mix * uScale + uOffset;
-
-
-                    uv.setXY(i, u_adj, v_adj);
-                }
-                uv.needsUpdate = true;
-            }
-
-
-            if (isValidGeometry && this.material_is_a_video) {
                 let geometry;
-                const geo_def = this.el.getAttribute('geometry');
+                const geo_def = this.el.getAttribute('geometry') || {};
                 if (this.data.mode === 'half') {
-                    //geometry = new THREE.SphereGeometry(geo_def.radius || 100, geo_def.segmentsWidth || 64, geo_def.segmentsHeight || 64, Math.PI / 3, 4 * Math.PI / 3, 0.2, Math.PI-0.4);
-                    //RF5.2 geometry = new THREE.SphereGeometry(geo_def.radius || 100, geo_def.segmentsWidth || 64, geo_def.segmentsHeight || 64, 19 * Math.PI / 36, 17 * Math.PI / 18, 0, Math.PI);
-                    geometry = new THREE.SphereGeometry(geo_def.radius || 100, geo_def.segmentsWidth || 64, geo_def.segmentsHeight || 64, 10 * Math.PI / 18, 16 * Math.PI / 18, 1 * Math.PI / 18, Math.PI - 2 * Math.PI / 18);
+                    geometry = new THREE.SphereGeometry(
+                        geo_def.radius || 100,
+                        geo_def.segmentsWidth || 64,
+                        geo_def.segmentsHeight || 64,
+                        10 * Math.PI / 18,
+                        16 * Math.PI / 18,
+                        0.2,
+                        Math.PI - 0.4
+                    );
                 } else {
-                    geometry = new THREE.SphereGeometry(geo_def.radius || 100, geo_def.segmentsWidth || 64, geo_def.segmentsHeight || 64);
+                    geometry = new THREE.SphereGeometry(
+                        geo_def.radius || 100,
+                        geo_def.segmentsWidth || 64,
+                        geo_def.segmentsHeight || 64
+                    );
                 }
 
-                //object3D.position.x = 0.032 * (this.data.eye === 'left' ? -1 : 1); //20?
-                //const axis = this.data.split === 'horizontal' ? 'y' : 'x';
-                //const offset = this.data.eye === 'left' ? (axis === 'y' ? { x: 0.05, y: 0 } : { x: 0, y: 0.5 }) : (axis === 'y' ? { x: 0.55, y: 0 } : { x: 0, y: 0 });
-                //const repeat = axis === 'y' ? { x: 0.4, y: 1 } : { x: 1, y: 0.5 };
-                //RF5.2object3D.position.x = 0.032 * (this.data.eye === 'left' ? -1 : 1);
-                //RF5.2object3D.position.y = 1.7;
-                //RF5.2 const axis = this.data.split === 'horizontal' ? 'y' : 'x';
-                //RF5.2 const offset = this.data.eye === 'right' ? (axis === 'y' ? { x: 0, y: 0 } : { x: 0, y: 0.5 }) : (axis === 'y' ? { x: 0.5, y: 0 } : { x: 0, y: 0 });
-                //RF5.2 const repeat = axis === 'y' ? { x: 0.5, y: 1 } : { x: 1, y: 0.5 };
-                object3D.position.x = 0.032 * (this.data.eye === 'left' ? -1 : 1);
-                object3D.position.y = 1.7;
+                object3D.rotation.y = Math.PI / 2;
+                //object3D.position.x = 0.032 * (this.data.eye === 'left' ? -1 : 1);
+                //object3D.position.y = 1.7;
 
-                /*const axis = this.data.split === 'horizontal' ? 'y' : 'x';
-                const offset = this.data.eye === 'left' ? (axis === 'y' ? { x: 0, y: 0.1 } : { x: 0, y: 0.5 }) : (axis === 'y' ? { x: 0.5, y: 0.1 } : { x: 0, y: 0 });
-                const repeat = axis === 'y' ? { x: 0.5, y: 0.9 } : { x: 1, y: 0.5 };
+                const axis = this.data.split === 'horizontal' ? 'y' : 'x';
+                const offset = this.data.eye === 'left'
+                    ? (axis === 'y' ? { x: 0, y: 0 } : { x: 0, y: 0.5 })
+                    : (axis === 'y' ? { x: 0.5, y: 0 } : { x: 0, y: 0 });
+                const repeat = axis === 'y' ? { x: 0.5, y: 1 } : { x: 1, y: 0.5 };
+
                 const uvAttribute = geometry.attributes.uv;
                 for (let i = 0; i < uvAttribute.count; i++) {
                     const u = uvAttribute.getX(i) * repeat.x + offset.x;
                     const v = uvAttribute.getY(i) * repeat.y + offset.y;
                     uvAttribute.setXY(i, u, v);
                 }
-                uvAttribute.needsUpdate = true;*/
-
-                applyUVmap(geometry, this.data.eye, {
-
-                    uKEdge: 1, uKCenter: 0.1, uSharp: 0.95, vToUWeightPower: 4
-
-                });
-
-                object3D.rotation.y = Math.PI / 2;
+                uvAttribute.needsUpdate = true;
 
                 object3D.geometry = geometry;
+
                 this.videoEl = document.getElementById('remotevideo');
-                this.el.setAttribute('material', { src: this.videoEl });
-                //  this.videoEl.play();// これ不要（むしろエラー）
+                this.videoEl.muted = true;
+                this.videoEl.play();
+
+                return true;
+            };
+
+            // ★ まず今すぐ適用を試み、未準備なら mesh が載った瞬間に一度だけ適用
+            if (!applyGeometryAndUV()) {
+                const once = (e) => {
+                    if (e.detail.type !== 'mesh') return;
+                    if (applyGeometryAndUV()) this.el.removeEventListener('object3dset', once);
+                };
+                this.el.addEventListener('object3dset', once);
             } else {
-                this.video_click_event_added = true;
+                // 既に適用できた
             }
         },
         update(oldData) {
@@ -613,9 +556,9 @@ if (!('stereo' in AFRAME.components)) {
                 } else {
                     // if enter vr.. then omit ..
                     const scene = document.querySelector('a-scene');
-                    if (!scene?.is('vr-mode')){
+                    if (!scene?.is('vr-mode')) {
                         rootCam.layers.enable(originalData.eye === 'left' ? 1 : 2);
-                    }else{
+                    } else {
                         rootCam.layers.set(0)
                     }
                 }
@@ -629,5 +572,131 @@ if (!('stereo' in AFRAME.components)) {
     if (!('stereocam' in AFRAME.components)) {
         AFRAME.registerComponent('stereocam', stereocamComponent);
     }
+}
+
+const fisheyeStereoShader = {
+    schema: {
+        src: { type: 'map' },                 // #remotevideo (SBSの片側ずつが並ぶ1枚)
+        side: { type: 'string', default: 'back' },
+
+        // ▼魚眼→球面のパラメータ（必要に応じて調整）
+        fov: { type: 'number', default: 160.0 }, // 魚眼の視野角[deg]
+        radius: { type: 'number', default: 1.12 }, // 半径スケール（半分画像の半径/半分画像の幅/2）
+        cx: { type: 'number', default: 0.5 }, // 片側（半分）の中心x (0..1)
+        cy: { type: 'number', default: 0.5 }, // 片側（半分）の中心y (0..1)
+    },
+
+    vertexShader: `
+      varying vec3 vDir;
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        // 球面上のローカル法線方向を使う
+        vDir = normalize(position);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+
+    fragmentShader: `
+      precision highp float;
+        uniform sampler2D src;
+        uniform float fov;
+        uniform float radius;
+        uniform float cx;
+        uniform float cy;
+
+        varying vec3 vDir;
+        varying vec2 vUv;
+
+        const float PI = 3.14159265359;
+
+        void main() {
+        float eyeOffset = (vUv.x > 0.5) ? 0.5 : 0.0;
+        vec3 dir = normalize(vDir);
+
+        // ★ 固定ヨー回転（右へずらす角度をここで決め打ち）
+        // 例: +15度（右へ）。逆に行くなら -15.0 に変えてください。
+        const float YAW_DEG = 90.0;
+        float yaw = radians(YAW_DEG);
+        float cY = cos(yaw), sY = sin(yaw);
+        // 右手系・前方 = -Z
+        vec3 d = vec3(
+            cY * dir.x + sY * dir.z,   // X'
+            dir.y,                     // Y'
+        -sY * dir.x + cY * dir.z    // Z'
+        );
+
+        // ▼以降は回転後の d を使って極座標 → 魚眼マッピング
+        float fovRad = radians(fov);
+        float theta  = acos(clamp(-d.z, -1.0, 1.0)); // 光軸(-Z)からの角度
+        float alpha  = atan(d.y, d.x);               // X–Y 平面の方位角
+
+        // （必要なら一時的に無効化してデバッグ）
+        if (theta > 0.5 * fovRad) {
+            gl_FragColor = vec4(0.0,0.0,0.0,1.0);
+            return;
+        }
+
+        float rNorm = (theta / (0.5 * fovRad)) * radius;
+        float x = cx + rNorm * cos(alpha);
+        float y = cy + rNorm * sin(alpha);
+
+        if (x < 0.0 || x > 1.0 || y < 0.0 || y > 1.0) {
+            gl_FragColor = vec4(0.0,0.0,0.0,1.0);
+            return;
+        }
+
+        vec2 uvSrc = vec2(eyeOffset + x * 0.5, 1.0 - y);
+        gl_FragColor = texture2D(src, uvSrc);
+        }
+    `,
+
+    _asVideoTexture(el) {
+        if (!el) return null;
+        if (el.isTexture) return el;             // 既に Texture
+        if (el.tagName === 'VIDEO') {
+            const tex = new THREE.VideoTexture(el);
+            tex.minFilter = THREE.LinearFilter;
+            tex.magFilter = THREE.LinearFilter;
+            tex.generateMipmaps = false;
+            tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+            tex.colorSpace = THREE.SRGBColorSpace ?? undefined;
+            tex.flipY = false;                      // 球の内側貼りで重要
+            return tex;
+        }
+        return el; // 画像や既存Textureも通す
+    },
+
+    init: function (data) {
+        this.material = new THREE.ShaderMaterial({
+            uniforms: {
+                src: { value: this._asVideoTexture(data.src) },
+                fov: { value: data.fov },
+                radius: { value: data.radius },
+                cx: { value: data.cx },
+                cy: { value: data.cy },
+            },
+            vertexShader: this.vertexShader,
+            fragmentShader: this.fragmentShader,
+            side: (data.side === 'back') ? THREE.BackSide : THREE.FrontSide
+        });
+    },
+
+    update: function (data) {
+        const next = this._asVideoTexture(data.src);
+        if (this.material.uniforms.src.value !== next) {
+            this.material.uniforms.src.value = next;
+        }
+        this.material.side = (data.side === 'back') ? THREE.BackSide : THREE.FrontSide;
+        this.material.uniforms.fov.value = data.fov;
+        this.material.uniforms.radius.value = data.radius;
+        this.material.uniforms.cx.value = data.cx;
+        this.material.uniforms.cy.value = data.cy;
+        this.material.needsUpdate = true;
+    }
+}
+
+if (typeof AFRAME !== 'undefined' && !AFRAME.shaders['fisheye-stereo']) {
+    AFRAME.registerShader('fisheye-stereo', fisheyeStereoShader);
 }
 

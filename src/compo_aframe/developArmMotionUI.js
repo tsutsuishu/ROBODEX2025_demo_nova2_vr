@@ -274,7 +274,6 @@ AFRAME.registerComponent('arm-wand-motion-ui', {
     }
   }
 });
-
 AFRAME.registerComponent('arm-motion-inertia', {
   schema:
     { type: 'string', default: "0 0 0:0 0 0" }

@@ -20,6 +20,8 @@ export default function DynamicHome() {
   const [deviceName, setDeviceName] = useState("");
   const [vrModeAngle, setVrModeAngle] = useState<number | "">("");
   const [vrModeOffsetX, setVrModeOffsetX] = useState<number | "">("");
+  const [vrModeOffsetY, setVrModeOffsetY] = useState<number | "">("");
+  const [vrModeOffsetZ, setVrModeOffsetZ] = useState<number | "">("");
 
   const [message, setMessage] = useState<string>("");
 
@@ -27,13 +29,14 @@ export default function DynamicHome() {
   useEffect(() => {
     const dName = getCookie(id_cookie);
     const angleStr = getCookie("vrModeAngle");
-    const offsetStr = getCookie("vrModeOffsetX");
-
+    const offsetXStr = getCookie("vrModeOffsetX");
+    const offsetYStr = getCookie("vrModeOffsetY");
+    const offsetZStr = getCookie("vrModeOffsetZ");
     setDeviceName(dName ?? "");
     setVrModeAngle(angleStr !== undefined && angleStr !== "" ? Number(angleStr) : "");
-    setVrModeOffsetX(
-      offsetStr !== undefined && offsetStr !== "" ? Number(offsetStr) : ""
-    );
+    setVrModeOffsetX(offsetXStr !== undefined && offsetXStr !== "" ? Number(offsetXStr) : "");
+    setVrModeOffsetY(offsetYStr !== undefined && offsetYStr !== "" ? Number(offsetYStr) : "");
+    setVrModeOffsetZ(offsetZStr !== undefined && offsetZStr !== "" ? Number(offsetZStr) : "");
   }, []);
 
   const saveAll = () => {
@@ -41,6 +44,8 @@ export default function DynamicHome() {
       setCookie(id_cookie, deviceName ?? "");
       setCookie("vrModeAngle", String(vrModeAngle ?? ""));
       setCookie("vrModeOffsetX", String(vrModeOffsetX ?? ""));
+      setCookie("vrModeOffsetY", String(vrModeOffsetY ?? ""));
+      setCookie("vrModeOffsetZ", String(vrModeOffsetZ ?? ""));
       setMessage("保存しました (Saved cookies)");
       setTimeout(() => setMessage(""), 2500);
     } catch (e) {
@@ -52,13 +57,14 @@ export default function DynamicHome() {
   const reloadFromCookies = () => {
     const dName = getCookie(id_cookie);
     const angleStr = getCookie("vrModeAngle");
-    const offsetStr = getCookie("vrModeOffsetX");
-
+    const offsetXStr = getCookie("vrModeOffsetX");
+    const offsetYStr = getCookie("vrModeOffsetY");
+    const offsetZStr = getCookie("vrModeOffsetZ");
     setDeviceName(dName ?? "");
     setVrModeAngle(angleStr !== undefined && angleStr !== "" ? Number(angleStr) : "");
-    setVrModeOffsetX(
-      offsetStr !== undefined && offsetStr !== "" ? Number(offsetStr) : ""
-    );
+    setVrModeOffsetX(offsetXStr !== undefined && offsetXStr !== "" ? Number(offsetXStr) : "");
+    setVrModeOffsetY(offsetYStr !== undefined && offsetYStr !== "" ? Number(offsetYStr) : "");
+    setVrModeOffsetZ(offsetZStr !== undefined && offsetZStr !== "" ? Number(offsetZStr) : "");
     setMessage("Cookie から再読込しました");
     setTimeout(() => setMessage(""), 2000);
   };
@@ -67,10 +73,14 @@ export default function DynamicHome() {
     removeCookie(id_cookie);
     removeCookie("vrModeAngle");
     removeCookie("vrModeOffsetX");
+    removeCookie("vrModeOffsetY");
+    removeCookie("vrModeOffsetZ");
     setMessage("削除しました (Cleared)");
     setDeviceName("");
     setVrModeAngle("");
     setVrModeOffsetX("");
+    setVrModeOffsetY("");
+    setVrModeOffsetZ("");
     setTimeout(() => setMessage(""), 2000);
   };
 
@@ -129,7 +139,7 @@ export default function DynamicHome() {
               value={vrModeAngle === "" ? "" : String(vrModeAngle)}
               onChange={(e) => handleFloat(setVrModeAngle, e.target.value)}
               className="w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring"
-              placeholder="例: 45.0"
+              placeholder="例: 180.0"
             />
           </div>
 
@@ -147,7 +157,43 @@ export default function DynamicHome() {
               value={vrModeOffsetX === "" ? "" : String(vrModeOffsetX)}
               onChange={(e) => handleFloat(setVrModeOffsetX, e.target.value)}
               className="w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring"
-              placeholder="例: 0.25"
+              placeholder="例: 0.35"
+            />
+          </div>
+
+          {/* vrModeOffsetY */}
+          <div className="rounded-2xl border bg-white p-3 shadow-sm">
+            <p className="mt-2 text-xs text-gray-500">初期状態のアームのYオフセット入力</p>
+            <label className="block text-sm font-medium mb-2" htmlFor="vrModeOffsetY">
+              vrModeOffsetY (float)
+            </label>
+            <input
+              id="vrModeOffsetY"
+              type="number"
+              step="any"
+              inputMode="decimal"
+              value={vrModeOffsetY === "" ? "" : String(vrModeOffsetY)}
+              onChange={(e) => handleFloat(setVrModeOffsetY, e.target.value)}
+              className="w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring"
+              placeholder="例: 0.75"
+            />
+          </div>
+
+          {/* vrModeOffsetZ */}
+          <div className="rounded-2xl border bg-white p-3 shadow-sm">
+            <p className="mt-2 text-xs text-gray-500">初期状態のアームのZオフセット入力</p>
+            <label className="block text-sm font-medium mb-2" htmlFor="vrModeOffsetZ">
+              vrModeOffsetZ (float)
+            </label>
+            <input
+              id="vrModeOffsetZ"
+              type="number"
+              step="any"
+              inputMode="decimal"
+              value={vrModeOffsetZ === "" ? "" : String(vrModeOffsetZ)}
+              onChange={(e) => handleFloat(setVrModeOffsetZ, e.target.value)}
+              className="w-full rounded-xl border px-3 py-2 focus:outline-none focus:ring"
+              placeholder="例: -0.9"
             />
           </div>
         </div>
@@ -189,6 +235,12 @@ export default function DynamicHome() {
             </li>
             <li>
               vrModeOffsetX: <code className="ml-1">{JSON.stringify(vrModeOffsetX)}</code>
+            </li>
+            <li>
+              vrModeOffsetY: <code className="ml-1">{JSON.stringify(vrModeOffsetY)}</code>
+            </li>
+            <li>
+              vrModeOffsetZ: <code className="ml-1">{JSON.stringify(vrModeOffsetZ)}</code>
             </li>
           </ul>
         </section>
