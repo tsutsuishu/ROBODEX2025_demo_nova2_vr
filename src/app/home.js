@@ -133,6 +133,7 @@ export default function Home(props) {
               grip-control
               default-event-target
               motion-dynamic-filter={`enabled: ${props.appmode === AppMode.filter}`}
+              arm-direction-ray
             /> : (props.appmode === AppMode.adjust) ?
             <a-plane id="nova2-plane"
               ref={nova2_ref}

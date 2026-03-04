@@ -133,6 +133,8 @@ AFRAME.registerComponent('thumbstick-menu', {
 
 AFRAME.registerComponent('thumbmenu-event-handler', {
   init: function() {
+    this.el.setAttribute('line', 'visible', false);
+    this.el.setAttribute('raycaster', 'enabled', false);
     this.el.addEventListener('thumbmenu-select', (evt) => {
       console.log('### menu select event: ', evt.detail.index);
       const cylinder = this.el.laserCylinder;
