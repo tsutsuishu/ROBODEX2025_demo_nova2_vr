@@ -656,9 +656,10 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       displacement: "displacement"
     }
     this.controlMode = this.ControlMode.mimic
-    
+
     // 変位制御
     this.deadRadius = 0.2
+    this.middleLayer = 0.05
     // コントローラ周りのデッドゾーン(debug可視化)
     const ctrlDeadzone = document.createElement('a-sphere');
     this.el.appendChild(ctrlDeadzone);
@@ -682,14 +683,14 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
         if (iso3 && ctrlEl) {
           this.objStartingPose = iso3;
           this.lastObjPose = this.objStartingPose
-          
+
           this.vrCtrlStartingPoseInv
             = isoMultiply(isoInvert([ctrlEl.object3D.position,
             ctrlEl.object3D.quaternion]),
               this.worldToBase);
           this.vrCtrlLastPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
           this.vrCtrlLastFilteredPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
-          
+
           // VRcontroller周りのバブルの基準用(triggerを押してからは離すまで更新なし．可視化はせずに姿勢計算の閾値として利用)
           this.bubbleCenterPoseInv
             = isoMultiply(isoInvert([ctrlEl.object3D.position,
@@ -742,7 +743,7 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       const deltaLength = vrCtrlStartToLast[0].length()
       const newMode = this.deadRadius > deltaLength ? this.ControlMode.mimic : this.ControlMode.displacement;
       if (this.controlMode !== newMode) {
-        if(this.controlMode == this.ControlMode.displacement && newMode == this.ControlMode.mimic){
+        if (this.controlMode == this.ControlMode.displacement && newMode == this.ControlMode.mimic) {
           //ロボット手先バブルの位置をコントローラと一致ように更新
           // // vrCtrlStartToLast
           // const controllerBubbleSurfaceToCenterNew = isoInvert(vrCtrlStartToLast)
@@ -762,19 +763,19 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
             new THREE.Vector3(0, 0, 0),
             vrCtrlToObj[1].clone().conjugate()
           ];
-          
+
           // this.robotBubbleCenterPose = isoMultiply(isoMultiply(this.lastObjPose,
           //   isoMultiply(ObjToVrCtrl,
           //     controllerBubbleSurfaceToCenter)),
           //   vrCtrlToObj);
-          
-          
+
+
 
           // // GUI関連実装予定
 
           // // 目標姿勢
-  
-          
+
+
 
 
 
@@ -877,39 +878,40 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
 
         // deadzoneを超えたvectorのみを参照
         const deadDeltaVector = vrCtrlStartToLast[0].clone().multiplyScalar(this.deadRadius / deltaLength)
-        const delta = [vrCtrlStartToLast[0].clone().sub(deadDeltaVector).multiplyScalar(0.05), scaleQuaternion(vrCtrlStartToLast[1], 0.001)]
-        // const delta = isoMultiply(this.controllerOutInv, vrControllerPose)
-        // delta[0].multiplyScalar(0.001 / delta[0].length() );
-        // delta[1] = scaleQuaternion(delta[1], 0.001)
-        
-        this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
-          isoMultiply(ObjToVrCtrl,
-            delta)),
-            vrCtrlToObj);
-            this.lastObjPose[1].normalize();
-        newObjPose = this.lastObjPose
-   
-        this.robotBubbleCenterPose = isoMultiply(isoMultiply(this.robotBubbleCenterPose,
-          isoMultiply(ObjToVrCtrl,
-            delta)),
-          vrCtrlToObj);
-        this.robotBubbleCenterPose[1].normalize();
-        
+        // const delta = [vrCtrlStartToLast[0].clone().sub(deadDeltaVector).multiplyScalar(0.05), scaleQuaternion(vrCtrlStartToLast[1], 0.001)] //球の中心から
+        const delta = isoMultiply(this.controllerOutInv, vrControllerPose) //コントローラ姿勢に依存している
+        delta[0].multiplyScalar(0.002 / delta[0].length());
+        delta[1] = scaleQuaternion(delta[1], 0.001)
+
+        if(deltaLength > this.deadRadius + this.middleLayer){
+          this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
+            isoMultiply(ObjToVrCtrl,
+              delta)),
+              vrCtrlToObj);
+              this.lastObjPose[1].normalize();
+              newObjPose = this.lastObjPose
+              
+              this.robotBubbleCenterPose = isoMultiply(isoMultiply(this.robotBubbleCenterPose,
+                isoMultiply(ObjToVrCtrl,
+                  delta)),
+                  vrCtrlToObj);
+                  this.robotBubbleCenterPose[1].normalize();
+                  
+                }
 
 
-        // 方向表示用
-        const moveDirection = ctrlEl.object3D.position
-          .clone()
-          .sub(this.bubbleCenterPose[0])
-          .applyQuaternion(this.el.object3D.quaternion.clone().invert())
+        // 方向表示用 VRコントローラ基準→現在位置
+        // const moveDirection = ctrlEl.object3D.position
+        //   .clone()
+        //   .sub(this.bubbleCenterPose[0])
+        //   .applyQuaternion(this.el.object3D.quaternion.clone().invert())
+        // this.el.emit('direction-ray-update', {
+        //   origin: newObjPose[0],
+        //   direction: moveDirection,
+        //   visible: true
+        // })
 
-        this.el.emit('direction-ray-update', {
-          origin:    newObjPose[0],
-          direction: moveDirection,
-          visible:   true
-        })
-        
-        
+
 
 
         // 方向調整例
@@ -937,12 +939,15 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       // console.log(`target x:${newObjPose[0].x} y:${newObjPose[0].y} z:${newObjPose[0].z} \n x:${newObjPose[1].x} y:${newObjPose[1].y} z:${newObjPose[1].z} w:${newObjPose[1].w}`)
       // console.log(`target ${newObjPose[1]}`)
 
-      const m4 = new THREE.Matrix4();
-      m4.compose(newObjPose[0], newObjPose[1], new THREE.Vector3(1, 1, 1));
-      this.el.workerRef?.current?.postMessage({
-        type: 'destination',
-        endLinkPose: m4.elements
-      });
+      if(deltaLength > this.deadRadius + this.middleLayer || deltaLength < this.deadRadius){
+
+        const m4 = new THREE.Matrix4();
+        m4.compose(newObjPose[0], newObjPose[1], new THREE.Vector3(1, 1, 1));
+        this.el.workerRef?.current?.postMessage({
+          type: 'destination',
+          endLinkPose: m4.elements
+        });
+      }
     }
   },
   update: function (oldData) {
@@ -957,9 +962,9 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
 
 AFRAME.registerComponent('arm-direction-ray', {
   schema: {
-    color:   { type: 'color',  default: '#FF0000' },
-    radius:  { type: 'number', default: 0.001 },
-    length:  { type: 'number', default: 0.25 },
+    color: { type: 'color', default: '#FF0000' },
+    radius: { type: 'number', default: 0.001 },
+    length: { type: 'number', default: 0.25 },
     opacity: { type: 'number', default: 0.8 },
   },
 
