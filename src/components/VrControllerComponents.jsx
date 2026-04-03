@@ -16,7 +16,7 @@ function VrControllerComponents(props) {
         <>
           <a-entity right-controller
             laser-controls="hand: right"
-            raycaster="objects: .clickable"
+            raycaster="objects: .clickable;  showLine: false"
             line="color: blue; opacity: 0.75"
             thumbstick-menu={`items: ${menuItems}`}
             thumbmenu-event-handler
