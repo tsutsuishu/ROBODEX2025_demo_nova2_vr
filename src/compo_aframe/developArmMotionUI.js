@@ -672,49 +672,6 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       ctrlDeadzone.getObject3D('mesh').material.depthWrite = false; //透過オブジェクト越しにgltfを見るために必要
     });
 
-    //debug
-    const frameMarker1 = document.createElement('a-entity');
-    frameMarker1.setAttribute('a-xy-axes-frame', { // 上下逆にしています。
-      length: 0.05,
-      radius: 0.002,
-      sphere: 0.008,
-      opacity: 0.7,
-      color: myColor ? myColor : 'yellow',
-    });
-    this.el.appendChild(frameMarker1);
-    this.frameMarker1 = frameMarker1;
-    frameMarker1.object3D.visible = true;
-    frameMarker1.object3D.position.copy(new THREE.Vector3(0, 1, 0));
-
-    const frameMarker2 = document.createElement('a-entity');
-    frameMarker2.setAttribute('a-xy-axes-frame', { // 上下逆にしています。
-      length: 0.05,
-      radius: 0.002,
-      sphere: 0.008,
-      opacity: 0.7,
-      color: myColor ? myColor : 'papule',
-    });
-    this.el.appendChild(frameMarker2);
-    this.frameMarker2 = frameMarker2;
-    frameMarker2.object3D.visible = true;
-    frameMarker2.object3D.position.copy(new THREE.Vector3(0, 1, 0));
-    
-    const frameMarker3 = document.createElement('a-entity');
-    frameMarker3.setAttribute('a-xy-axes-frame', { // 上下逆にしています。
-      length: 0.5,
-      radius: 0.002,
-      sphere: 0.008,
-      opacity: 0.7,
-      color: myColor ? myColor : 'blue',
-    });
-    this.el.appendChild(frameMarker3);
-    this.frameMarker3 = frameMarker3;
-    frameMarker3.object3D.visible = true;
-    frameMarker3.object3D.position.copy(new THREE.Vector3(0, 1, 0));
-
-
-
-
     this.el.addEventListener('triggerdown', (evt) => {
       console.log('### trigger down event. laserVisible: ',
         evt.detail?.originalTarget.laserVisible);
@@ -832,7 +789,6 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
         }
       }
 
-      
       const vrCtrlLastPoseInv = isoInvert(this.vrCtrlLastPose)
       this.vrCtrlLastPose = vrControllerPose
       const vrCtrlDiffTick = isoMultiply(vrCtrlLastPoseInv, vrControllerPose)
@@ -852,62 +808,19 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
 
       vrCtrlDiffTickFiltered[0].multiplyScalar(0.5);
       vrCtrlDiffTickFiltered[1] = scaleQuaternion(vrCtrlDiffTickFiltered[1], 0.5);
-      // vrCtrlDiffTickFiltered[0].multiplyScalar(1);
-      // vrCtrlDiffTickFiltered[1] = scaleQuaternion(vrCtrlDiffTickFiltered[1], 1);
 
-
-      // this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, vrCtrlDiffTickFiltered)
-      // this.vrCtrlLastFilteredPose[1].normalize();
-      // 多分独立しないでいい
-      this.vrCtrlLastFilteredPose[0].add(vrCtrlDiffTickFiltered[0].clone().applyQuaternion(this.vrCtrlLastFilteredPose[1]));
-      this.vrCtrlLastFilteredPose[1].multiply(vrCtrlDiffTickFiltered[1]).normalize();
+      this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, vrCtrlDiffTickFiltered)
+      this.vrCtrlLastFilteredPose[1].normalize();
 
       let newObjPose = [new THREE.Vector3, new THREE.Quaternion]
       if (this.controlMode == this.ControlMode.mimic) {
         // mimic操作
-        // 手先姿勢座標系での差分表現
-        // const filteredVrCtrlStartingPoseInv = [
-        //   new THREE.Vector3(0, 0, 0),
-        //   vrCtrlStartToLast[1].clone().multiply(this.vrCtrlLastFilteredPose[1].clone().conjugate())
-        // ];
-        // const vrCtrlToObj = [
-        //   new THREE.Vector3(0, 0, 0),
-        //   filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
-        // ];
-        // const ObjToVrCtrl = [
-        //   new THREE.Vector3(0, 0, 0),
-        //   vrCtrlToObj[1].clone().conjugate()
-        // ];
-
         const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
         
-        // const vrControllerDelta = [
-        //   this.vrCtrlStartingPoseInv[0].clone().add(this.vrCtrlLastFilteredPose[0].clone()).applyQuaternion(this.vrCtrlStartingPoseInv[1].clone()),
-        //   this.vrCtrlStartingPoseInv[1].clone().multiply(this.vrCtrlLastFilteredPose[1].clone())
-        // ];
-
-      this.frameMarker1.object3D.position.copy(vrControllerDelta[0]);
-      this.frameMarker1.object3D.quaternion.copy(vrControllerDelta[1]);
-
-      this.frameMarker2.object3D.position.copy(this.vrCtrlLastFilteredPose[0]);
-      this.frameMarker2.object3D.quaternion.copy(this.vrCtrlLastFilteredPose[1]);
-
-        // const filteredVrCtrlStartingPoseInv = [
-        //   new THREE.Vector3(0, 0, 0),
-        //   vrControllerDelta[1].clone().multiply(vrControllerPose[1].clone().conjugate())
-        // ]; //可変的な回転反映に対応したコントローラ座標系での開始位置を改めて，現在位置と差分から計算
-        // const vrCtrlToObj = [
-        //   new THREE.Vector3(0, 0, 0),
-        //   filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
-        // ];
-        // const ObjToVrCtrl = [
-        //   new THREE.Vector3(0, 0, 0),
-        //   vrCtrlToObj[1].clone().conjugate()
-        // ];
         const vrCtrlToObj = [
           new THREE.Vector3(0, 0, 0),
           this.vrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
-        ];
+        ];// 手先姿勢座標系での差分表現(スケーリングによらずコントローラ姿勢を参照する)
         const ObjToVrCtrl = [
           new THREE.Vector3(0, 0, 0),
           vrCtrlToObj[1].clone().conjugate()
@@ -918,10 +831,6 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
             vrControllerDelta)),
           vrCtrlToObj);
         this.lastObjPose = newObjPose //毎回保存しているけど，切り替えする直前のみ必要
-
-        // this.frameMarker3.object3D.position.copy(filteredVrCtrlStartingPoseInv[0]);
-        // this.frameMarker3.object3D.quaternion.copy(filteredVrCtrlStartingPoseInv[1]);
-
       } else if(this.controlMode == this.ControlMode.displacement || this.controlMode == this.ControlMode.determineDirection) {
         // displacement操作
         const filteredVrCtrlStartingPoseInv = [
@@ -984,7 +893,6 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
               delta)),
               vrCtrlToObj);
 
-          // const moveDirection = newObjPose[0].clone().sub(prevPos).normalize();
           this.el.emit('line-update', {
             origin: prevPos,
             end: end[0],
@@ -995,8 +903,6 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       }
       this.frameMarker.object3D.position.copy(newObjPose[0]);
       this.frameMarker.object3D.quaternion.copy(newObjPose[1]);
-      // console.log(`target x:${newObjPose[0].x} y:${newObjPose[0].y} z:${newObjPose[0].z} \n x:${newObjPose[1].x} y:${newObjPose[1].y} z:${newObjPose[1].z} w:${newObjPose[1].w}`)
-      // console.log(`target ${newObjPose[1]}`)
 
       if(this.controlMode == this.ControlMode.mimic || this.controlMode == this.ControlMode.displacement) {
         const m4 = new THREE.Matrix4();

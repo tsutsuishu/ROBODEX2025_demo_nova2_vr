@@ -132,7 +132,7 @@ export default function Home(props) {
               arm-mimic-displacement-motion-ui={base_position+":"+base_rotation}  
               grip-control
               default-event-target
-              motion-dynamic-filter={`enabled: ${props.appmode === AppMode.filter}`}
+              motion-dynamic-filter={`enabled: ${true}`}
               arm-direction-ray
             /> : (props.appmode === AppMode.adjust) ?
             <a-plane id="nova2-plane"
