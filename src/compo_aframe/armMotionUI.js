@@ -119,15 +119,15 @@ AFRAME.registerComponent('arm-motion-ui', {
       const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
       this.vrCtrlLastPose = vrControllerPose
 
-      vrControllerDelta[0] = vrControllerDelta[0].multiplyScalar(1.0);
-      vrControllerDelta[1].normalize();
+      vrControllerDelta[0] = vrControllerDelta[0].multiplyScalar(0.6);
+      vrControllerDelta[1] = scaleQuaternion(vrControllerDelta[1], 0.6);
       const filteredVrCtrlStartingPoseInv = [
         new THREE.Vector3(0, 0, 0),
         vrControllerDelta[1].clone().multiply(vrControllerPose[1].clone().conjugate())
       ]; //可変的な回転反映に対応したコントローラ座標系での開始位置を改めて，現在位置と差分から計算
       const vrCtrlToObj = [
         new THREE.Vector3(0, 0, 0),
-        filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
+        this.vrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
       ];
       const ObjToVrCtrl = [
         new THREE.Vector3(0, 0, 0),
