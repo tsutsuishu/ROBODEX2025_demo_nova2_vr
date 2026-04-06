@@ -1,6 +1,7 @@
 import AFRAME from 'aframe';
 const THREE = window.AFRAME.THREE;
 import { isoInvert, isoMultiply } from '../lib/isometry3.js';
+import { scaleQuaternion } from "../components/filter.js"
 
 function workerPose(el) {
   const pose = el?.workerData?.current?.pose;

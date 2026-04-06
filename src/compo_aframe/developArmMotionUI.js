@@ -672,6 +672,49 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       ctrlDeadzone.getObject3D('mesh').material.depthWrite = false; //透過オブジェクト越しにgltfを見るために必要
     });
 
+    //debug
+    const frameMarker1 = document.createElement('a-entity');
+    frameMarker1.setAttribute('a-xy-axes-frame', { // 上下逆にしています。
+      length: 0.05,
+      radius: 0.002,
+      sphere: 0.008,
+      opacity: 0.7,
+      color: myColor ? myColor : 'yellow',
+    });
+    this.el.appendChild(frameMarker1);
+    this.frameMarker1 = frameMarker1;
+    frameMarker1.object3D.visible = true;
+    frameMarker1.object3D.position.copy(new THREE.Vector3(0, 1, 0));
+
+    const frameMarker2 = document.createElement('a-entity');
+    frameMarker2.setAttribute('a-xy-axes-frame', { // 上下逆にしています。
+      length: 0.05,
+      radius: 0.002,
+      sphere: 0.008,
+      opacity: 0.7,
+      color: myColor ? myColor : 'papule',
+    });
+    this.el.appendChild(frameMarker2);
+    this.frameMarker2 = frameMarker2;
+    frameMarker2.object3D.visible = true;
+    frameMarker2.object3D.position.copy(new THREE.Vector3(0, 1, 0));
+    
+    const frameMarker3 = document.createElement('a-entity');
+    frameMarker3.setAttribute('a-xy-axes-frame', { // 上下逆にしています。
+      length: 0.5,
+      radius: 0.002,
+      sphere: 0.008,
+      opacity: 0.7,
+      color: myColor ? myColor : 'blue',
+    });
+    this.el.appendChild(frameMarker3);
+    this.frameMarker3 = frameMarker3;
+    frameMarker3.object3D.visible = true;
+    frameMarker3.object3D.position.copy(new THREE.Vector3(0, 1, 0));
+
+
+
+
     this.el.addEventListener('triggerdown', (evt) => {
       console.log('### trigger down event. laserVisible: ',
         evt.detail?.originalTarget.laserVisible);
@@ -690,7 +733,7 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
             ctrlEl.object3D.quaternion]),
               this.worldToBase);
           this.vrCtrlLastPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
-          this.vrCtrlLastFilteredPose = isoMultiply(this.baseToWorld, [ctrlEl.object3D.position, ctrlEl.object3D.quaternion]);
+          this.vrCtrlLastFilteredPose =  [this.vrCtrlLastPose[0].clone(), this.vrCtrlLastPose[1].clone()]
 
           // VRcontroller周りのバブルの基準用(triggerを押してからは離すまで更新なし．可視化はせずに姿勢計算の閾値として利用)
           this.bubbleCenterPoseInv
@@ -778,17 +821,18 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
           // 姿勢計算基準の初期化
           this.objStartingPose = this.lastObjPose;
           this.vrCtrlStartingPoseInv = isoMultiply(isoInvert([ctrlEl.object3D.position, ctrlEl.object3D.quaternion]), this.worldToBase);
-          this.vrCtrlLastPose = vrControllerPose
-          this.vrCtrlLastFilteredPose = vrControllerPose
-          this.lastObjPose = this.objStartingPose
-
-          this.robotBubbleStartingPose = this.robotBubbleCenterPose
+          this.vrCtrlLastPose = [vrControllerPose[0].clone(), vrControllerPose[1].clone()]
+          this.vrCtrlLastFilteredPose = [vrControllerPose[0].clone(), vrControllerPose[1].clone()]
         }
         if(newMode == this.ControlMode.mimic) {
-          this.el.emit('line-update', {visible: false})
+          this.el.emit('line-update', {
+            origin: new THREE.Vector3(0, 0, 0),
+            direction: new THREE.Vector3(0, 0, 1),
+            visible: false})
         }
       }
 
+      
       const vrCtrlLastPoseInv = isoInvert(this.vrCtrlLastPose)
       this.vrCtrlLastPose = vrControllerPose
       const vrCtrlDiffTick = isoMultiply(vrCtrlLastPoseInv, vrControllerPose)
@@ -807,9 +851,16 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
       // }
 
       vrCtrlDiffTickFiltered[0].multiplyScalar(0.5);
-      vrCtrlDiffTickFiltered[1] = scaleQuaternion(vrCtrlDiffTickFiltered[1], 0.5)
-      this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, vrCtrlDiffTickFiltered)
-      this.vrCtrlLastFilteredPose[1].normalize();
+      vrCtrlDiffTickFiltered[1] = scaleQuaternion(vrCtrlDiffTickFiltered[1], 0.5);
+      // vrCtrlDiffTickFiltered[0].multiplyScalar(1);
+      // vrCtrlDiffTickFiltered[1] = scaleQuaternion(vrCtrlDiffTickFiltered[1], 1);
+
+
+      // this.vrCtrlLastFilteredPose = isoMultiply(this.vrCtrlLastFilteredPose, vrCtrlDiffTickFiltered)
+      // this.vrCtrlLastFilteredPose[1].normalize();
+      // 多分独立しないでいい
+      this.vrCtrlLastFilteredPose[0].add(vrCtrlDiffTickFiltered[0].clone().applyQuaternion(this.vrCtrlLastFilteredPose[1]));
+      this.vrCtrlLastFilteredPose[1].multiply(vrCtrlDiffTickFiltered[1]).normalize();
 
       let newObjPose = [new THREE.Vector3, new THREE.Quaternion]
       if (this.controlMode == this.ControlMode.mimic) {
@@ -828,35 +879,49 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
         //   vrCtrlToObj[1].clone().conjugate()
         // ];
 
-        // // GUI関連実装予定
-
-        // // 目標姿勢
-        // this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
-        //   isoMultiply(ObjToVrCtrl,
-        //     vrCtrlDiffTickFiltered)),
-        //   vrCtrlToObj);
-        // this.lastObjPose[1].normalize();
-        // newObjPose = this.lastObjPose
-
-
         const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
-        const filteredVrCtrlStartingPoseInv = [
-          new THREE.Vector3(0, 0, 0),
-          vrControllerDelta[1].clone().multiply(vrControllerPose[1].clone().conjugate())
-        ]; //可変的な回転反映に対応したコントローラ座標系での開始位置を改めて，現在位置と差分から計算
+        
+        // const vrControllerDelta = [
+        //   this.vrCtrlStartingPoseInv[0].clone().add(this.vrCtrlLastFilteredPose[0].clone()).applyQuaternion(this.vrCtrlStartingPoseInv[1].clone()),
+        //   this.vrCtrlStartingPoseInv[1].clone().multiply(this.vrCtrlLastFilteredPose[1].clone())
+        // ];
+
+      this.frameMarker1.object3D.position.copy(vrControllerDelta[0]);
+      this.frameMarker1.object3D.quaternion.copy(vrControllerDelta[1]);
+
+      this.frameMarker2.object3D.position.copy(this.vrCtrlLastFilteredPose[0]);
+      this.frameMarker2.object3D.quaternion.copy(this.vrCtrlLastFilteredPose[1]);
+
+        // const filteredVrCtrlStartingPoseInv = [
+        //   new THREE.Vector3(0, 0, 0),
+        //   vrControllerDelta[1].clone().multiply(vrControllerPose[1].clone().conjugate())
+        // ]; //可変的な回転反映に対応したコントローラ座標系での開始位置を改めて，現在位置と差分から計算
+        // const vrCtrlToObj = [
+        //   new THREE.Vector3(0, 0, 0),
+        //   filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
+        // ];
+        // const ObjToVrCtrl = [
+        //   new THREE.Vector3(0, 0, 0),
+        //   vrCtrlToObj[1].clone().conjugate()
+        // ];
         const vrCtrlToObj = [
           new THREE.Vector3(0, 0, 0),
-          filteredVrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
+          this.vrCtrlStartingPoseInv[1].clone().multiply(this.objStartingPose[1])
         ];
         const ObjToVrCtrl = [
           new THREE.Vector3(0, 0, 0),
           vrCtrlToObj[1].clone().conjugate()
         ];
+
         newObjPose = isoMultiply(isoMultiply(this.objStartingPose,
           isoMultiply(ObjToVrCtrl,
             vrControllerDelta)),
           vrCtrlToObj);
         this.lastObjPose = newObjPose //毎回保存しているけど，切り替えする直前のみ必要
+
+        // this.frameMarker3.object3D.position.copy(filteredVrCtrlStartingPoseInv[0]);
+        // this.frameMarker3.object3D.quaternion.copy(filteredVrCtrlStartingPoseInv[1]);
+
       } else if(this.controlMode == this.ControlMode.displacement || this.controlMode == this.ControlMode.determineDirection) {
         // displacement操作
         const filteredVrCtrlStartingPoseInv = [
