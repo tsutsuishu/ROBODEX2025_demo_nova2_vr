@@ -119,8 +119,8 @@ AFRAME.registerComponent('arm-motion-ui', {
       const vrControllerDelta = isoMultiply(this.vrCtrlStartingPoseInv, this.vrCtrlLastFilteredPose)
       this.vrCtrlLastPose = vrControllerPose
 
-      vrControllerDelta[0] = vrControllerDelta[0].multiplyScalar(0.6);
-      vrControllerDelta[1] = scaleQuaternion(vrControllerDelta[1], 0.6);
+      vrControllerDelta[0] = vrControllerDelta[0].multiplyScalar(0.3);
+      vrControllerDelta[1] = scaleQuaternion(vrControllerDelta[1], 0.3);
       const filteredVrCtrlStartingPoseInv = [
         new THREE.Vector3(0, 0, 0),
         vrControllerDelta[1].clone().multiply(vrControllerPose[1].clone().conjugate())

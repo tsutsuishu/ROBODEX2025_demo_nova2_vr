@@ -19,6 +19,8 @@ let sora_once = true; // soraの初期化を一度だけ行うためのフラグ
 let lastStatTime = 0;
 let lastStatBytes = 0;
 
+const SIGNALING_URL = process.env.NEXT_PUBLIC_SIGNALING_URL ?? "wss://sora2.uclab.jp/signaling";
+
 
 export default function StereoVideo(props) {
     const { rendered, set_rtcStats, appmode } = props
@@ -63,8 +65,8 @@ export default function StereoVideo(props) {
         if (sora_once && objectRender) {
             console.log("Using sora-js-sdk version:", Sora.version());
             // const signalingUrl = 'wss://sora.uclab.jp/signaling'; //demo用
-            const signalingUrl = 'wss://sora2.uclab.jp/signaling'; // 202508 demo用
             // const signalingUrl = 'wss://sora3.uclab.jp/signaling'; // 202508 demo用
+            const signalingUrl = SIGNALING_URL;
             const channelId = 'nova2-vr180';
             const channelId1 = 'nova2-hand';
             const audioChannelId = 'nova2-audio'; // 202508 のdemo では、使わない予定
