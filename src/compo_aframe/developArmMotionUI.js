@@ -659,8 +659,8 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
     this.controlMode = this.ControlMode.mimic
 
     // 変位制御
-    this.mimicRadius = 0.3
-    this.determineDirRadius = 0.35
+    this.mimicRadius = 0.2
+    this.determineDirRadius = 0.25
     // コントローラ周りのデッドゾーン(debug可視化)
     const ctrlDeadzone = document.createElement('a-sphere');
     this.el.appendChild(ctrlDeadzone);
@@ -830,7 +830,7 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
           isoMultiply(ObjToVrCtrl,
             vrControllerDelta)),
           vrCtrlToObj);
-        this.lastObjPose = newObjPose //毎回保存しているけど，切り替えする直前のみ必要
+        this.lastObjPose = newObjPose //毎回保存しているけど，切り替えする直前のみ必要(mimicでは不使用)
       } else if(this.controlMode == this.ControlMode.displacement || this.controlMode == this.ControlMode.determineDirection) {
         // displacement操作
         const filteredVrCtrlStartingPoseInv = [
@@ -870,7 +870,7 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
         const prevPos = this.lastObjPose[0].clone();
 
         if(this.controlMode == this.ControlMode.displacement){
-          delta[0].multiplyScalar(0.002 / Math.abs(this.mimicRadius - this.determineDirRadius)); //定数スピード
+          delta[0].multiplyScalar(0.001 / Math.abs(this.mimicRadius - this.determineDirRadius));
           this.lastObjPose = isoMultiply(isoMultiply(this.lastObjPose,
             isoMultiply(ObjToVrCtrl,
               delta)),
@@ -879,10 +879,14 @@ AFRAME.registerComponent('arm-mimic-displacement-motion-ui', {
           newObjPose = this.lastObjPose
               
           // 方向表示　適用差分参照
-          const moveDirection = newObjPose[0].clone().sub(prevPos).normalize();
-          this.el.emit('direction-ray-update', {
-            origin: newObjPose[0],
-            direction: moveDirection,
+          const directionRay = [delta[0].clone().multiplyScalar(100), delta[1].clone()]
+          const rayEnd = isoMultiply(isoMultiply(this.lastObjPose,
+            isoMultiply(ObjToVrCtrl,
+              directionRay)),
+              vrCtrlToObj);
+          this.el.emit('line-update', {
+            origin: prevPos,
+            end: rayEnd[0],
             visible: true
           })
         } else if(this.controlMode == this.ControlMode.determineDirection) {  
