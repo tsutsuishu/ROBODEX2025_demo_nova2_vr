@@ -1,5 +1,6 @@
 {
-  "name": "tsutsui-demo-nova2",
+  "name": "nova2-demo-local",
+  "__name": "tsutsui-demo-nova2",
   "_name": "robodex2025-demo-nova2", 
   "version": "0.1.0",
   "private": true,

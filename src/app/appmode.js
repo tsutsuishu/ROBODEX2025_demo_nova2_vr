@@ -22,7 +22,8 @@ export function isControlMode(appmode) {
           appmode === AppMode.withDualCam ||
           appmode === AppMode.filter ||
           appmode === AppMode.develop ||
-          appmode === AppMode.adjust);
+          appmode === AppMode.adjust ||
+          appmode === AppMode.practice);
 }
 
 export function isCameraMode(appmode) {
